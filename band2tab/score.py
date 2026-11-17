@@ -11,7 +11,9 @@ def pitch_name(p): return NAMES[int(p)%12]+str(int(p)//12-1)
 def clean_notes(notes):
     out=[]
     for n in notes:
-        n=dict(n); p=int(n['pitch']); a=float(n['onset']); b=float(n['offset'])
+        n=dict(n); raw_pitch=n['pitch']; p=int(raw_pitch); a=float(n['onset']); b=float(n['offset'])
+        if isinstance(raw_pitch,bool) or p!=raw_pitch:
+            raise ValueError('pitch must be an integer MIDI pitch')
         if not (0<=p<=127 and math.isfinite(a) and math.isfinite(b) and 0<=a<b):
             raise ValueError(f'Invalid note: {n}')
         n.update(pitch=p,onset=a,offset=b,name=pitch_name(p),id=len(out))
@@ -53,6 +55,7 @@ def assign_frets(notes, part='guitar', tuning=None, max_fret=24, beam=64, span=5
         states=sorted(nxt,key=lambda x:x[0])[:beam]
     best=states[0][3] if states else {}
     for n in notes:
+        n.pop('review_reason',None)
         sf=best.get(n['id']); n['string']=sf[0] if sf else None
         n['fret']=sf[1] if sf else None
         if not sf: n['review_reason']='unplayable_or_out_of_range'
@@ -61,14 +64,15 @@ def assign_frets(notes, part='guitar', tuning=None, max_fret=24, beam=64, span=5
 def beat_position(t, beats):
     import numpy as np
     beats=np.asarray(beats,float)
-    if len(beats)<2: raise ValueError('At least two beats required')
+    if beats.ndim!=1 or len(beats)<2 or not np.all(np.isfinite(beats)) or not np.all(np.diff(beats)>0):
+        raise ValueError('At least two finite, strictly increasing beats required')
     if t<beats[0]: return (t-beats[0])/(beats[1]-beats[0])
     if t>beats[-1]: return len(beats)-1+(t-beats[-1])/(beats[-1]-beats[-2])
     return float(np.interp(t,beats,np.arange(len(beats))))
 
 def quantize(notes,bpm=120.,beats_per_bar=4,grid=4,first_downbeat=0.,beats=None):
     """Keep raw times. Actual grid conflicts must be reviewed before final engraving."""
-    if bpm<=0 or beats_per_bar not in (3,4) or grid not in (3,4):
+    if not math.isfinite(bpm) or bpm<=0 or beats_per_bar not in (3,4) or grid not in (3,4):
         raise ValueError('bpm>0, beats_per_bar=3/4, grid=3/4 required')
     out=[]
     for n in notes:
@@ -195,6 +199,9 @@ def write_outputs(parts,out,bpm=120.,beats_per_bar=4,grid=4,tunings=None,beats=N
     bar=beats_per_bar*grid
     for part,notes in assigned.items():
         lines.append(part.upper())
+        for n in notes:
+            if n['string'] is None:
+                lines.append(f"x / note {n['id']} / {n['name']} / {n['onset']:.3f}-{n['offset']:.3f}s / unassigned")
         for start in range(0,max((n['q_end'] for n in notes),default=bar),bar):
             for s in range(1,len((tunings or TUNINGS)[part])+1):
                 cells=['---']*bar

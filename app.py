@@ -3,13 +3,32 @@ from pathlib import Path
 import json, subprocess, tempfile, shutil
 import streamlit as st
 import pandas as pd
-from band2tab.audio import convert
 from band2tab.score import read_midi,write_outputs,midi_timing,active_at
+from band2tab.workflow import load_document,editor_rows,replace_part,export_document
 
 ROOT=Path(__file__).resolve().parent
 st.set_page_config(page_title='Band2Tab',layout='wide')
 st.title('Band2Tab')
 st.caption('音声・動画からギター／ベースのTAB下書きを作成し、音を確かめながら修正します。')
+
+def new_run():
+    folder=ROOT/'results'/'ui';folder.mkdir(parents=True,exist_ok=True)
+    return Path(tempfile.mkdtemp(prefix='band2tab_',dir=folder))
+
+def load_notes(document):
+    run=new_run();out=run/'score'
+    export_document(document,out)
+    st.session_state['run']=str(run);st.session_state['output_dir']=str(out)
+    st.session_state['score']=json.loads((out/'notes.json').read_text())
+
+with st.expander('既知音符・音符JSONから始める（モデル不要）',expanded=True):
+    if st.button('既知音符の例を開く'):
+        load_notes(load_document((ROOT/'examples/notes.json').read_text(encoding='utf-8')))
+    notes_upload=st.file_uploader('音符JSON',type=['json'])
+    if st.button('音符JSONを読み込む',disabled=notes_upload is None):
+        try:load_notes(load_document(notes_upload.getvalue()))
+        except (ValueError,KeyError,TypeError) as exc:st.error(str(exc))
+
 upload=st.file_uploader('音声・動画ファイル',type=['wav','mp3','flac','m4a','mp4','mov','mid','midi'])
 with st.expander('詳細設定',expanded=False):
     engines=['MuScriptor（ミックス音源）']
@@ -28,10 +47,11 @@ with st.expander('詳細設定',expanded=False):
     meter=st.selectbox('拍子',[4,3])
 if upload and st.button('解析する',type='primary'):
     try:
-        run=Path(tempfile.mkdtemp(prefix='band2tab_'));src=run/('input'+Path(upload.name).suffix.lower());src.write_bytes(upload.getvalue())
+        run=new_run();src=run/('input'+Path(upload.name).suffix.lower());src.write_bytes(upload.getvalue())
         with st.spinner('解析中です。初回はモデルの取得に時間がかかります。'):
             if src.suffix.lower() in ('.mid','.midi'):midi=src
             else:
+                from band2tab.audio import convert
                 audio=convert(src,run/'input.wav')
                 if engine.startswith('Mu'):
                     midi=run/'raw.mid'
@@ -57,21 +77,26 @@ if upload and st.button('解析する',type='primary'):
             meta['analysis_scope']='input_midi' if src.suffix.lower() in ('.mid','.midi') else 'whole_mix' if engine.startswith('Mu') and not forced else 'single_part'
             (out/'notes.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2))
             if chords_enabled and (run/'input.wav').exists():
-                from band2tab.harmony import recognize,annotate_score
-                ch=recognize(run/'input.wav',out/'chords.json',device='cuda' if device=='cuda' else 'cpu')
-                annotate_score(out/'score.musicxml',ch,json.loads((out/'notes.json').read_text()))
+                try:
+                    from band2tab.harmony import recognize,annotate_score
+                    ch=recognize(run/'input.wav',out/'chords.json',device='cuda' if device=='cuda' else 'cpu')
+                    annotate_score(out/'score.musicxml',ch,json.loads((out/'notes.json').read_text()))
+                except Exception as exc:
+                    st.warning('音符の解析は成功しました。コード解析は未完了です: '+str(exc))
             st.session_state['run']=str(run);st.session_state['score']=json.loads((out/'notes.json').read_text())
+            st.session_state['output_dir']=str(out)
         st.success('下書きを作成しました。原音と照合して確認してください。')
     except Exception as e:st.error(str(e))
 if 'score' in st.session_state:
-    j=st.session_state['score'];run=Path(st.session_state['run']);out=run/'score'
+    j=st.session_state['score'];run=Path(st.session_state['run']);out=Path(st.session_state.get('output_dir',str(run/'score')))
     if (run/'input.wav').exists():st.audio(str(run/'input.wav'))
     if j['issues']:st.warning(f"要確認: {len(j['issues'])}件。未割当・量子化衝突はJSONに残しています。")
+    else:st.success('未割当・量子化衝突は0件です。譜面と原音を確認してください。')
     st.subheader('ギター＋ベース：時刻を指定して音を確認')
     if j.get('analysis_scope')=='single_part':st.info('この入力は単一パートです。ギターとベースを合わせて確認する場合は、原音をMuScriptorで解析してください。')
     inspection=dict(j['parts'])
     end=max((n['offset'] for ns in inspection.values() for n in ns),default=1.)
-    when=st.slider('確認する時刻（秒）',min_value=0.,max_value=max(.01,float(end)),value=0.,step=.01)
+    when=st.slider('確認する時刻（秒）',min_value=0.,max_value=max(.01,float(end)),value=0.,step=.01,key='time_'+str(out))
     chords_data=json.loads((out/'chords.json').read_text()) if (out/'chords.json').exists() else None
     snap=active_at(inspection,when,chords_data)
     from band2tab.harmony import display
@@ -102,19 +127,20 @@ if 'score' in st.session_state:
     for col,name in zip(cols,['score.musicxml','raw.mid','notes.json','tab.txt']):
         col.download_button(name,(out/name).read_bytes(),file_name=name)
     st.caption('音高・長さの修正は下の音符表で行えます。運指は再計算します。MusicXMLはMuseScoreで開いて確認できます。')
-    rows=[]
-    for part,notes in j['parts'].items():
-        for n in notes:rows.append({'part':part,'pitch':n['pitch'],'onset':n['onset'],'offset':n['offset']})
-    edited=st.data_editor(pd.DataFrame(rows),num_rows='dynamic',use_container_width=True)
+    edit_part=st.selectbox('編集するパート',list(j['parts']))
+    rows=editor_rows(j,edit_part)
+    edited=st.data_editor(pd.DataFrame(rows,columns=['_row','pitch','onset','offset','velocity']),num_rows='dynamic',use_container_width=True,
+        key='editor_'+edit_part+'_'+str(out),disabled=['_row'],column_config={'_row':None,
+        'pitch':st.column_config.NumberColumn('MIDI音高',min_value=0,max_value=127,step=1,required=True),
+        'onset':st.column_config.NumberColumn('開始（秒）',min_value=0.,required=True),
+        'offset':st.column_config.NumberColumn('終了（秒）',min_value=0.,required=True),
+        'velocity':st.column_config.NumberColumn('強さ',min_value=1,max_value=127,step=1,required=True)})
+    st.caption('表を変更したら「修正を反映する」を押してください。保存ボタンは反映済みの音符を出力します。')
     if st.button('修正を反映する'):
         try:
-            parts={}
-            for r in edited.to_dict('records'):
-                if r['part'] not in ('guitar','bass'):raise ValueError('partはguitarまたはbassを指定してください')
-                parts.setdefault(r['part'],[]).append({k:r[k] for k in ['pitch','onset','offset']})
-            write_outputs(parts,out,j['bpm'],j['beats_per_bar'],j['grid'],j.get('tuning'),j.get('beat_times'))
-            if (out/'chords.json').exists():
-                from band2tab.harmony import annotate_score
-                annotate_score(out/'score.musicxml',json.loads((out/'chords.json').read_text()),json.loads((out/'notes.json').read_text()))
-            st.session_state['score']=json.loads((out/'notes.json').read_text());st.rerun()
+            document=replace_part(j,edit_part,edited.to_dict('records'))
+            updated=Path(tempfile.mkdtemp(prefix='edited_',dir=run))
+            export_document(document,updated,chords_data)
+            st.session_state['score']=json.loads((updated/'notes.json').read_text())
+            st.session_state['output_dir']=str(updated);st.rerun()
         except Exception as e:st.error(str(e))

@@ -1,0 +1,8 @@
+# Model-free B workflow; Python 3.12, Mac arm64 and Linux CPU.
+numpy==1.26.4
+pretty_midi==0.2.10
+mir_eval==0.8.2
+streamlit==1.41.1
+pandas>=2.2,<3
+pyarrow==19.0.1
+setuptools<81
