@@ -57,11 +57,11 @@ class EventRefiner(nn.Module):
         prior=torch.nn.functional.one_hot(baseline,3).to(x.dtype)*2.
         return prior+self.net(x)
 
-def proposed_parts(notes,probability,threshold=.75,margin=.2):
+def proposed_parts(notes,probability,threshold=.75,margin=.2,allow_removal=True):
     parts={'guitar':[],'bass':[]};changes=[]
     for i,(n,p) in enumerate(zip(notes,probability)):
         old=n['baseline_class'];best=int(np.argmax(p));chosen=old
-        if threshold<1. and best!=old and p[best]>=threshold and p[best]-p[old]>=margin:chosen=best
+        if threshold<1. and best!=old and p[best]>=threshold and p[best]-p[old]>=margin and (allow_removal or best!=0):chosen=best
         if chosen!=old:
             changes.append({'candidate':i,'from':PARTS[old],'to':PARTS[chosen],
                             'score':float(p[chosen]),'note':dict(n)})
@@ -79,7 +79,7 @@ def refine(audio,midi,checkpoint=None,mode='review',device='cpu'):
         return {'parts':original,'baseline_parts':copy.deepcopy(original),'suggested_parts':copy.deepcopy(original),
                 'refinement_changes':[],'refinement_mode':'disabled','automatic_application_approved':False}
     state=torch.load(checkpoint,map_location='cpu',weights_only=True)
-    if state['schema']!=SCHEMA:raise ValueError('Unknown refiner feature schema')
+    if state['schema'] not in (SCHEMA,'muscriptor_event_refiner_duration_v2'):raise ValueError('Unknown refiner feature schema')
     approved=bool(state.get('automatic_application_approved',False))
     if mode=='apply' and not approved:raise ValueError('Automatic correction is not validated; use review mode')
     notes=candidates_from_midi(midi);x=event_features(features(audio),notes)

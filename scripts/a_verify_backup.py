@@ -3,7 +3,7 @@ import argparse,hashlib,json,subprocess
 from pathlib import Path
 p=argparse.ArgumentParser();p.add_argument('--host',default='aiexp');p.add_argument('--backup',default='backups/azure');a=p.parse_args()
 root=Path(a.backup).resolve()
-remote=subprocess.run(['ssh','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',a.host,"cd ~/music_ai_exp && find runs -type f -name '*.pt' -exec sha256sum {} \\;"],capture_output=True,text=True,check=True)
+remote=subprocess.run(['ssh','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',a.host,"cd ~/music_ai_exp && find runs models -type f -name '*.pt' -exec sha256sum {} \\;"],capture_output=True,text=True,check=True)
 checked=[]
 for row in remote.stdout.splitlines():
     expected,path=row.split(maxsplit=1);local=root/path
