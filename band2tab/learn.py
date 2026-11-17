@@ -1,6 +1,6 @@
 """Supervised learning and note-level evaluation for the experimental CRNN."""
 from pathlib import Path
-import json, random, hashlib
+import json, random, hashlib, os
 from functools import lru_cache
 import numpy as np
 import torch
@@ -8,9 +8,31 @@ from torch.utils.data import Dataset, DataLoader
 from .model import NoteCRNN, load, predict
 from .audio import decode, SR, HOP
 
+def require_sounding_labels(items):
+    for it in items:
+        slakh=it['dataset'] in ('baby','slakh') or it.get('source_dataset') in ('baby','slakh')
+        if it['part']=='bass' and slakh and it.get('label_semantics')!='sounding_pitch_v2':
+            raise ValueError('Legacy Slakh bass labels are an octave high. Run python -m band2tab.correct and use manifest_v2_*.json')
+
 def sample_item(items):
     part=random.choice(sorted({it["part"] for it in items}))
-    return random.choice([it for it in items if it["part"]==part])
+    subset=[it for it in items if it['part']==part]
+    if any('sampling_weight' in it for it in subset):
+        return random.choices(subset,weights=[it.get('sampling_weight',1.) for it in subset],k=1)[0]
+    return random.choice(subset)
+
+def transpose_window(x,y,semitones):
+    """CQT translation augmentation (3 bins per semitone), no wraparound."""
+    occupied=np.flatnonzero(y.any(axis=(0,1)))
+    if len(occupied) and (occupied.min()+semitones<0 or occupied.max()+semitones>=y.shape[-1]):
+        raise ValueError('Transposition would lose a target note')
+    def shift(array,amount):
+        out=np.zeros_like(array)
+        if amount>0:out[...,amount:]=array[...,:-amount]
+        elif amount<0:out[...,:amount]=array[...,-amount:]
+        else:out[:]=array
+        return out
+    return shift(x,semitones*3),shift(y,semitones)
 
 class Windows(Dataset):
     def __init__(self,items,steps,augment=False):
@@ -18,7 +40,7 @@ class Windows(Dataset):
         self.windows=[(i,start) for i,it in enumerate(items)
                       for start in range(0,self.read(it['cache'])[0].shape[0],344)]
     @staticmethod
-    @lru_cache(maxsize=4)
+    @lru_cache(maxsize=int(os.environ.get('BAND2TAB_CACHE_ITEMS','4')))
     def read(path):
         with np.load(path) as z:return z['x'],z['y']
     def __len__(self):return self.steps if self.augment else len(self.windows)
@@ -38,9 +60,11 @@ class Windows(Dataset):
             pad=344-len(xx);xx=np.pad(xx,((0,pad),(0,0)));yy=np.pad(yy,((0,pad),(0,0),(0,0)));mask=np.pad(mask,(0,pad))
         return torch.from_numpy(xx),torch.from_numpy(yy),torch.tensor(it['part']=='bass',dtype=torch.long),torch.from_numpy(mask)
 
-def train(manifest='data/manifest.json',out='runs/clean',epochs=5,steps=100,batch=4,lr=.001,device='cuda',init=None,augment=False,dataset='all',resume=None):
+def train(manifest='data/manifest.json',out='runs/clean',epochs=5,steps=100,batch=4,lr=.001,device='cuda',init=None,augment=False,dataset='all',resume=None,pitch_augment=False):
     random.seed(17);np.random.seed(17);torch.manual_seed(17)
     items=json.loads(Path(manifest).read_text());items=[i for i in items if dataset=='all' or i['dataset']==dataset]
+    require_sounding_labels(items)
+    if augment and pitch_augment:raise ValueError('Use spectral noise or pitch augmentation separately for an interpretable experiment')
     tr=[i for i in items if i['split']=='train'];va=[i for i in items if i['split']=='val']
     if not tr or not va:raise ValueError('Training and validation data required')
     out=Path(out);out.mkdir(parents=True,exist_ok=True)
@@ -51,7 +75,7 @@ def train(manifest='data/manifest.json',out='runs/clean',epochs=5,steps=100,batc
     # Clip imbalance weights to avoid assigning extreme importance to a few labels.
     pos=np.zeros((3,66),np.float64);total=0
     for it in tr:
-        with np.load(it['cache']) as z:pos+=z['y'].sum(0);total+=len(z['y'])
+        _,labels=Windows.read(it['cache']);pos+=labels.sum(0);total+=len(labels)
     pw=torch.tensor(np.clip((total-pos)/np.maximum(pos,1),1,20),dtype=torch.float32,device=device)
     headw=torch.tensor([3.,1.,1.],device=device)[None,None,:,None]
     def loss(logits,y,mask):
@@ -63,12 +87,19 @@ def train(manifest='data/manifest.json',out='runs/clean',epochs=5,steps=100,batc
             if augment:return super().__getitem__(idx)
             it=sample_item(self.items);x,y=self.read(it['cache']);s=random.randrange(max(1,len(x)-344+1))
             xx=x[s:s+344];yy=y[s:s+344];m=np.ones(len(xx),np.float32)
+            if pitch_augment:
+                active=np.flatnonzero(yy.any(axis=(0,1)))
+                shifts=range(-12,3) if it['part']=='bass' else range(-2,3)
+                valid=[n for n in shifts if not len(active) or (active.min()+n>=0 and active.max()+n<66)]
+                xx,yy=transpose_window(xx,yy,random.choice(valid))
             if len(xx)<344:
                 p=344-len(xx);xx=np.pad(xx,((0,p),(0,0)));yy=np.pad(yy,((0,p),(0,0),(0,0)));m=np.pad(m,(0,p))
             return torch.from_numpy(xx.copy()),torch.from_numpy(yy.copy()),torch.tensor(it['part']=='bass',dtype=torch.long),torch.from_numpy(m)
     dl=DataLoader(Controlled(tr,steps*batch,augment=True),batch_size=batch,num_workers=0)
     vl=DataLoader(Windows(va,0),batch_size=batch,num_workers=0)
-    fingerprint=hashlib.sha256(json.dumps([{k:it.get(k) for k in ('id','dataset','part','split','group','notes')} for it in items],sort_keys=True).encode()).hexdigest()
+    keys=['id','dataset','part','split','group','notes']
+    if any('sampling_weight' in it for it in items):keys.append('sampling_weight')
+    fingerprint=hashlib.sha256(json.dumps([{k:it.get(k) for k in keys} for it in items],sort_keys=True).encode()).hexdigest()
     best=float('inf');history=[];start_epoch=0
     if resume:
         saved=torch.load(resume,map_location=device,weights_only=True)
@@ -77,6 +108,7 @@ def train(manifest='data/manifest.json',out='runs/clean',epochs=5,steps=100,batc
         cfg=saved['train_config']
         if (cfg['steps'],cfg['batch'],cfg['augment'],cfg['dataset'])!=(steps,batch,augment,dataset):
             raise ValueError('Resume training settings differ')
+        if cfg.get('pitch_augment',False)!=pitch_augment:raise ValueError('Resume pitch augmentation differs')
         opt.load_state_dict(saved['optimizer']);best=saved['best_validation_bce'];history=saved['history'];start_epoch=saved['epoch']
         random.setstate(saved['python_rng']);torch.set_rng_state(saved['torch_rng'].cpu())
         nr=saved['numpy_rng'];np.random.set_state((nr['name'],np.array(nr['keys'],dtype=np.uint32),nr['pos'],nr['has_gauss'],nr['cached_gaussian']))
@@ -93,13 +125,13 @@ def train(manifest='data/manifest.json',out='runs/clean',epochs=5,steps=100,batc
         with torch.no_grad():
             for x,y,part,mask in vl:valid.append(loss(model(x.to(device),part.to(device)),y.to(device),mask.to(device)).item())
         row={'epoch':epoch+1,'train_bce':float(np.mean(running)),'val_bce':float(np.mean(valid))};history.append(row);print(row,flush=True)
-        weights={'model':model.state_dict(),'schema':2,'sr':SR,'hop':HOP,'pitch_min':23,'pitch_max':88,'augment':augment,'epoch':epoch+1}
+        weights={'model':model.state_dict(),'schema':2,'sr':SR,'hop':HOP,'pitch_min':23,'pitch_max':88,'augment':augment,'epoch':epoch+1,'pitch_augment':pitch_augment,'label_semantics':'sounding_pitch_v2'}
         if row['val_bce']<best:
             best=row['val_bce'];atomic_save(weights,out/'best.pt')
         atomic_save(weights,out/f'epoch_{epoch+1:02d}.pt')
         nr=np.random.get_state()
         state={**weights,'optimizer':opt.state_dict(),'best_validation_bce':best,'history':history,
-               'dataset_fingerprint':fingerprint,'train_config':{'steps':steps,'batch':batch,'augment':augment,'dataset':dataset,'lr':lr},
+               'dataset_fingerprint':fingerprint,'train_config':{'steps':steps,'batch':batch,'augment':augment,'dataset':dataset,'lr':lr,'pitch_augment':pitch_augment},
                'python_rng':random.getstate(),'torch_rng':torch.get_rng_state(),
                'cuda_rng':torch.cuda.get_rng_state_all() if torch.cuda.is_available() else [],
                'numpy_rng':{'name':nr[0],'keys':nr[1].tolist(),'pos':nr[2],'has_gauss':nr[3],'cached_gaussian':nr[4]}}
@@ -144,13 +176,15 @@ def note_metrics(ref,est,with_offset=False,include_frames=True):
 def evaluate(checkpoint,manifest='data/manifest.json',split='val',out='reports/eval.json',device='cpu',threshold=.5,tune=False,frame_threshold=None,offset_threshold=None):
     if tune and split!='val':raise ValueError('Tune thresholds on validation only')
     items=[it for it in json.loads(Path(manifest).read_text()) if it['split']==split]
+    require_sounding_labels(items)
     if not items:raise ValueError('No evaluation examples')
+    checkpoint_hash=hashlib.sha256(Path(checkpoint).read_bytes()).hexdigest()
     model,_=load(checkpoint,device);cached=[]
     for it in items:
         with np.load(it['cache']) as z:p=predict(model,z['x'],int(it['part']=='bass'),device)
         cached.append((it,p))
         if len(cached)%20==0:print('Predicted',len(cached),'/',len(items),flush=True)
-    candidates=[(o,f,.5) for o in (.03,.05,.1,.2,.3,.5,.7) for f in (.1,.3,.5)] if tune else [(threshold,frame_threshold if frame_threshold is not None else threshold,offset_threshold if offset_threshold is not None else threshold)];results=[]
+    candidates=[(o,f,.5) for o in (.03,.05,.1,.2,.3,.5,.7,.85,.95) for f in (.1,.3,.5,.7)] if tune else [(threshold,frame_threshold if frame_threshold is not None else threshold,offset_threshold if offset_threshold is not None else threshold)];results=[]
     for th,fr,off in candidates:
         scores=[]
         for it,p in cached:
@@ -161,7 +195,7 @@ def evaluate(checkpoint,manifest='data/manifest.json',split='val',out='reports/e
     best=max(results,key=lambda x:x['macro_note_f1']).copy()
     best.update(split=split,checkpoint=str(checkpoint),tuned_on_validation=tune,validation_candidates=results,
                 manifest_sha256=hashlib.sha256(Path(manifest).read_bytes()).hexdigest(),
-                checkpoint_sha256=hashlib.sha256(Path(checkpoint).read_bytes()).hexdigest(),pitch_range_midi=[23,88],minimum_note_seconds=.03)
+                checkpoint_sha256=checkpoint_hash,pitch_range_midi=[23,88],minimum_note_seconds=.03)
     rows=[]
     for it,p in cached:
         est=decode(p,onset=best['threshold'],frame=best['frame_threshold'],offset=best['offset_threshold'])
@@ -174,6 +208,8 @@ def evaluate(checkpoint,manifest='data/manifest.json',split='val',out='reports/e
     for it,p in cached:
         est=decode(p,onset=best['threshold'],frame=best['frame_threshold'],offset=best['offset_threshold'])
         (predictions/(it['id']+'.json')).write_text(json.dumps({'id':it['id'],'notes':est}))
+    if hashlib.sha256(Path(checkpoint).read_bytes()).hexdigest()!=checkpoint_hash:
+        raise RuntimeError('Checkpoint changed during evaluation; evaluate an immutable epoch snapshot')
     dest.write_text(json.dumps(best,indent=2))
     print({k:v for k,v in best.items() if k not in ('tracks','validation_candidates')},flush=True)
     return best
@@ -184,6 +220,7 @@ def benchmark(engine,binary,manifest='data/manifest_clean.json',split='val',out=
     from .score import read_midi
     items=[it for it in json.loads(Path(manifest).read_text()) if it['split']==split]
     if limit:items=items[:limit]
+    require_sounding_labels(items)
     if not items:raise ValueError('No benchmark data')
     out=Path(out);cache=out.parent/(out.stem+'_predictions');cache.mkdir(parents=True,exist_ok=True)
     rows=[]

@@ -28,6 +28,10 @@ export TORCH_HOME="$PWD/models/torch"
 .venv/bin/python -m chordchart.setup bootstrap
 .venv/bin/python -m chordchart.setup doctor
 .venv/bin/python -m unittest discover -s tests -v
-printf '\n準備完了。モデルの利用条件に同意した後、次を実行します。\n'
-printf 'export HF_HOME="$PWD/models/huggingface"\n.venv-mu/bin/hf auth login\n'
+if [ -f models/muscriptor-medium/model.safetensors ]; then
+  printf '\n準備完了。取得済みのローカルMuScriptor mediumを使用します。\n'
+else
+  printf '\n準備完了。モデルの利用条件に同意した後、次を実行します。\n'
+  printf 'export HF_HOME="$PWD/models/huggingface"\n.venv-mu/bin/hf auth login\n'
+fi
 printf '普段の起動は Band2Tab.command をダブルクリックします。\n'

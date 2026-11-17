@@ -185,8 +185,16 @@ def slakh_items(root,dataset):
             if audio is None or not midi.exists():continue
             notes=[{'pitch':n.pitch,'onset':n.start,'offset':n.end}
                    for ins in pretty_midi.PrettyMIDI(str(midi)).instruments if not ins.is_drum for n in ins.notes]
+            # Slakh bass is written one octave above sounding, except this patch.
+            # YourMT3's author preprocessing implements the same documented fix.
+            if part=='bass' and not info.get('plugin_name'):
+                raise ValueError('Slakh bass octave correction requires plugin_name metadata')
+            shift=-12 if part=='bass' and info.get('plugin_name')!='scarbee_jay_bass_slap_both.nkm' else 0
+            if shift:
+                for note in notes:note['written_midi_pitch']=note['pitch'];note['pitch']+=shift
             yield {'id':dataset+'_'+folder.name+'_'+stem,'dataset':dataset,'part':part,
-                   'audio':str(audio.resolve()),'metadata_audio_rendered':info.get('audio_rendered'),'group':'slakh_'+group,'split':split,'notes':notes}
+                   'audio':str(audio.resolve()),'metadata_audio_rendered':info.get('audio_rendered'),'group':'slakh_'+group,'split':split,'notes':notes,
+                   'plugin_name':info.get('plugin_name'),'bass_octave_semitones':shift,'label_semantics':'sounding_pitch_v2'}
 
 def prepare(root='data',dataset='all'):
     root=Path(root);cache=root/'cache';cache.mkdir(parents=True,exist_ok=True)
@@ -200,7 +208,7 @@ def prepare(root='data',dataset='all'):
         for it in source:
             if it['id'] in known_bad:
                 skipped.append({'id':it['id'],'reason':'published_annotation_error','source':'https://github.com/marl/GuitarSet/issues/5 or /4'});continue
-            xfile=cache/(it['id']+'.npz')
+            xfile=cache/(it['id']+('_sounding_v2' if it['part']=='bass' else '')+'.npz')
             if not xfile.exists():
                 x=features(it['audio']);y,outside=note_targets(it['notes'],len(x))
                 if outside:

@@ -3,7 +3,7 @@ from pathlib import Path
 from collections import Counter,defaultdict
 import argparse,json,hashlib,time
 import numpy as np
-from .audio import SR,HOP,N_BINS,N_PITCHES,decode
+from .audio import SR,HOP,N_BINS,N_PITCHES,decode,note_targets
 
 def save(path,obj):
     p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)
@@ -23,6 +23,8 @@ def audit(manifest,out):
             if not np.isfinite(x).all() or not np.isfinite(y).all():errors.append([it['id'],'non_finite'])
             if not (x.max()>0):errors.append([it['id'],'silent_audio_with_notes'])
             if not np.isin(y,[0,1]).all():errors.append([it['id'],'invalid_target'])
+            expected,outside=note_targets(it['notes'],len(x))
+            if outside or not np.array_equal(y,expected):errors.append([it['id'],'cache_label_mismatch'])
             if abs(len(x)*HOP/SR-duration)>.1:errors.append([it['id'],'feature_audio_duration'])
         for n in it['notes']:
             if not(0<=n['onset']<n['offset']<=duration+.1):errors.append([it['id'],'invalid_note_time',n])

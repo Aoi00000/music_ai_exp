@@ -10,10 +10,13 @@ for row in remote.stdout.splitlines():
     if not local.exists() or hashlib.sha256(local.read_bytes()).hexdigest()!=expected:raise RuntimeError(f'Backup mismatch: {path}')
     checked.append({'file':path,'sha256':expected})
 if not checked:raise RuntimeError('No checkpoints verified')
-for manifest in ('manifest_clean','manifest_robust'):
-    items=json.loads((root/'data'/(manifest+'.json')).read_text())
+for source in sorted((root/'data').glob('manifest*.json')):
+    if source.stem.endswith(('_mac','_preparation')):continue
+    manifest=source.stem
+    items=json.loads(source.read_text())
     for it in items:
         for key in ('audio','cache'):
+            if key not in it:continue
             relative=it[key].split('/music_ai_exp/data/',1)[-1]
             local=root/'data'/relative
             if not local.is_file():raise FileNotFoundError(local)

@@ -116,6 +116,60 @@ class Core(unittest.TestCase):
             items=list(slakh_items(d,'baby'))
             self.assertEqual(len(items),3);self.assertEqual({i['split'] for i in items},{'train','val','test'})
             self.assertTrue(all(i['metadata_audio_rendered'] is False and len(i['notes'])==1 for i in items))
+    def test_training_annotation_alignment_detects_fixed_lag(self):
+        import soundfile as sf
+        from band2tab.adapt import alignment
+        with tempfile.TemporaryDirectory() as d:
+            sr=16000;y=np.zeros(sr*12,np.float32);notes=[]
+            for start in np.arange(.5,10.5,1.):
+                a=round((start+.04)*sr);length=round(.4*sr);y[a:a+length]=.5*np.sin(2*np.pi*220*np.arange(length)/sr)
+                notes.append({'onset':float(start)})
+            path=Path(d)/'test.wav';sf.write(path,y,sr)
+            result=alignment(path,notes)
+            self.assertTrue(result['accepted']);self.assertAlmostEqual(result['shift_seconds'],.04,delta=.006)
+    def test_weighted_sampling_preserves_part_balance(self):
+        from band2tab.learn import sample_item
+        import random
+        state=random.getstate();random.seed(17)
+        items=[{'id':'old','part':'guitar'},{'id':'new','part':'guitar','sampling_weight':1/3},{'id':'bass','part':'bass'}]
+        samples=[sample_item(items) for _ in range(10000)];random.setstate(state)
+        guitar=[it for it in samples if it['part']=='guitar']
+        self.assertTrue(.47<len(guitar)/len(samples)<.53)
+        self.assertTrue(.22<sum(it['id']=='new' for it in guitar)/len(guitar)<.28)
+    def test_cqt_transpose_preserves_pitch_and_no_wrap(self):
+        from band2tab.learn import transpose_window,require_sounding_labels
+        x=np.zeros((4,264),np.float32);y=np.zeros((4,3,66),np.float32);x[:,72]=1;y[:,1,24]=1
+        xx,yy=transpose_window(x,y,-12)
+        self.assertTrue((xx[:,36]==1).all());self.assertTrue((yy[:,1,12]==1).all())
+        self.assertEqual(float(yy.sum()),float(y.sum()));self.assertEqual(float(xx[:,-36:].sum()),0.)
+        with self.assertRaises(ValueError):transpose_window(x,y,-25)
+        with self.assertRaises(ValueError):require_sounding_labels([{'id':'old','part':'bass','dataset':'baby'}])
+        require_sounding_labels([{'id':'new','part':'bass','dataset':'baby','label_semantics':'sounding_pitch_v2'}])
+    def test_label_migration_preserves_already_corrected_bass(self):
+        from unittest.mock import patch
+        from band2tab.correct import run
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);notes=[{'pitch':43,'written_midi_pitch':55,'onset':0.,'offset':.1}]
+            cache=root/'source.npz';np.savez(cache,x=np.ones((12,264)),y=note_targets(notes,12)[0])
+            item={'id':'bass','part':'bass','cache':str(cache),'notes':notes,'label_semantics':'sounding_pitch_v2'}
+            (root/'manifest_clean.json').write_text(json.dumps([item]))
+            source={'id':'bass','bass_octave_semitones':-12,'plugin_name':'finger.nkm'}
+            with patch('band2tab.correct.slakh_items',return_value=[source]):run(root)
+            output=json.loads((root/'manifest_v2_clean.json').read_text())[0]
+            self.assertEqual(output['notes'],notes)
+            with np.load(output['cache']) as z:self.assertTrue(np.array_equal(z['y'],note_targets(notes,12)[0]))
+    def test_slakh_bass_uses_sounding_pitch_with_patch_exception(self):
+        import pretty_midi
+        from band2tab.data import slakh_items
+        with tempfile.TemporaryDirectory() as d:
+            for i,plugin in enumerate(('classic_bass.nkm','scarbee_jay_bass_slap_both.nkm','pop_bass.nkm')):
+                folder=Path(d)/f'Track{i:05d}';(folder/'stems').mkdir(parents=True);(folder/'MIDI').mkdir()
+                (folder/'metadata.yaml').write_text(f'UUID: song-{i}\nstems:\n  S00:\n    inst_class: Bass\n    plugin_name: {plugin}\n    audio_rendered: false\n')
+                (folder/'stems'/'S00.wav').write_bytes(b'existing audio')
+                midi=pretty_midi.PrettyMIDI();ins=pretty_midi.Instrument(33);ins.notes.append(pretty_midi.Note(80,55,0.,1.));midi.instruments.append(ins);midi.write(str(folder/'MIDI'/'S00.mid'))
+            items=list(slakh_items(d,'baby'))
+            self.assertEqual([it['notes'][0]['pitch'] for it in items],[43,55,43])
+            self.assertTrue(all(it['label_semantics']=='sounding_pitch_v2' for it in items))
     def test_model_shape_and_gradient(self):
         import torch
         from band2tab.model import NoteCRNN

@@ -35,7 +35,9 @@ if upload and st.button('解析する',type='primary'):
                 audio=convert(src,run/'input.wav')
                 if engine.startswith('Mu'):
                     midi=run/'raw.mid'
-                    cmd=[binary,'transcribe',str(audio),'--model',model,'--device',device,
+                    local_model=ROOT/'models'/f'muscriptor-{model}'/'model.safetensors'
+                    model_source=str(local_model) if local_model.exists() else model
+                    cmd=[binary,'transcribe',str(audio),'--model',model_source,'--device',device,
                          '--detect-tempo','true','--output',str(midi)]
                     if device=='cuda':cmd+=['--dtype','float16']
                 elif engine.startswith('Basic'):
