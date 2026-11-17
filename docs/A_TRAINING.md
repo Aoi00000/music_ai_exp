@@ -44,7 +44,7 @@ GuitarSetの既知の注釈誤り `04_BN3-154-E_comp`、`04_Jazz1-200-B_comp`、
 bash scripts/a_train.sh
 ```
 
-同じ構造・初期化・学習量で、訓練データだけを変更します。このスクリプトは訓練と検証までです。検証データで設定を決めてから `bash scripts/a_test.sh` を実行します。テスト結果を見ながら設定を変更しません。
+同じ構造・初期化・学習量で、訓練データだけを変更します。このスクリプトは訓練と検証までです。検証データで設定を決めてから `python scripts/a_freeze.py`、続いて `bash scripts/a_test.sh` を実行します。テスト結果を見ながら設定を変更しません。
 
 - `runs/a0/best.pt`, `runs/a1/best.pt`: 推論用の最良重み。
 - `runs/*/epoch_01.pt`等: 各エポックの重みを保持。
@@ -71,7 +71,7 @@ Macのローカルリポジトリ直下で実行します。
 bash scripts/a_backup.sh
 ```
 
-`backups/azure`にモデル・評価・ログ・manifestを回収します。Git登録対象ではありません。モデルのSHA256を照合し、最終版はMacでも読み込んで確認します。特徴量キャッシュと公式データのアーカイブも容量を確認して回収します。
+`backups/azure`にモデル・評価・ログ・manifestを回収します。Git登録対象ではありません。モデルのSHA256を照合し、最終版はMacでも読み込んで確認します。特徴量キャッシュと公式データのアーカイブも容量を確認して回収します。回収後は `python3 scripts/a_verify_backup.py` で全チェックポイントのSHA256照合とMac向けmanifest作成を実行します。
 
 Azureが利用不能になった場合は、回収したキャッシュとmanifestのパスをMacの保存先に合わせ、CPU/MPSで再開できます。公開アーカイブを再取得するときは、公式URLとチェックサムから再構成します。
 

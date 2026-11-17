@@ -64,6 +64,17 @@ def summarize(files,out):
             ax.bar(np.arange(len(labels))+(j-.5)*.35,vals,width=.35,label=condition)
         ax.set(xticks=np.arange(len(labels)),xticklabels=labels,ylim=(0,1),ylabel='Note F1',title=part);ax.tick_params(axis='x',rotation=20);ax.legend()
     fig.savefig(dest/'note_f1.png',dpi=160);plt.close(fig)
+    fig,ax=plt.subplots(figsize=(7,4),layout='constrained');found=False
+    for run in ('a0','a1'):
+        history=Path(files[0]).parent.parent/'runs'/run/'history.json'
+        if history.exists():
+            values=json.loads(history.read_text());found=True
+            for key,style in [('train_bce','-'),('val_bce','--')]:
+                ax.plot([r['epoch']*100 for r in values],[r[key] for r in values],style,label=run+' '+key)
+    if found:
+        ax.set(xlabel='Optimizer updates (100 per reported epoch)',ylabel='Weighted BCE',title='Learning curves (loss, not transcription accuracy)');ax.legend()
+        fig.savefig(dest/'learning_curves.png',dpi=160)
+    plt.close(fig)
     print('Saved',dest)
 
 def main():

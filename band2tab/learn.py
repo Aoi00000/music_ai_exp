@@ -128,13 +128,13 @@ def pitch_set_metrics(ref,est,hop=.02):
             'active_exact_match':float((r[active]==e[active]).all(1).mean()) if active.any() else 1.,
             'frame_hop_seconds':hop,'by_reference_polyphony':polyphony}
 
-def note_metrics(ref,est,with_offset=False):
+def note_metrics(ref,est,with_offset=False,include_frames=True):
     import mir_eval
     ri=np.array([[n['onset'],n['offset']] for n in ref],float).reshape(-1,2)
     ei=np.array([[n['onset'],n['offset']] for n in est],float).reshape(-1,2)
     rp=440*2**((np.array([n['pitch'] for n in ref])-69)/12)
     ep=440*2**((np.array([n['pitch'] for n in est])-69)/12)
-    frame=pitch_set_metrics(ref,est)
+    frame=pitch_set_metrics(ref,est) if include_frames else {}
     if not len(ref):return {'precision':float(not est),'recall':1.,'f1':float(not est),**frame}
     if not len(est):return {'precision':0.,'recall':0.,'f1':0.,**frame}
     p,r,f,_=mir_eval.transcription.precision_recall_f1_overlap(ri,rp,ei,ep,onset_tolerance=.05,
@@ -149,17 +149,26 @@ def evaluate(checkpoint,manifest='data/manifest.json',split='val',out='reports/e
     for it in items:
         with np.load(it['cache']) as z:p=predict(model,z['x'],int(it['part']=='bass'),device)
         cached.append((it,p))
+        if len(cached)%20==0:print('Predicted',len(cached),'/',len(items),flush=True)
     candidates=[(o,f,.5) for o in (.03,.05,.1,.2,.3,.5,.7) for f in (.1,.3,.5)] if tune else [(threshold,frame_threshold if frame_threshold is not None else threshold,offset_threshold if offset_threshold is not None else threshold)];results=[]
     for th,fr,off in candidates:
-        rows=[]
+        scores=[]
         for it,p in cached:
             est=decode(p,onset=th,frame=fr,offset=off)
-            est=[n for n in est if 23<=n['pitch']<=88]
-            rows.append({'id':it['id'],'dataset':it['dataset'],'part':it['part'],'group':it['group'],'reference_notes':len(it['notes']),'estimated_notes':len(est),
-                         **note_metrics(it['notes'],est),'offset_f1':note_metrics(it['notes'],est,True)['f1']})
-        results.append({'threshold':th,'frame_threshold':fr,'offset_threshold':off,'macro_note_f1':float(np.mean([r['f1'] for r in rows])),
-                        'macro_offset_f1':float(np.mean([r['offset_f1'] for r in rows])),'tracks':rows})
-    best=max(results,key=lambda x:x['macro_note_f1']);best.update(split=split,checkpoint=str(checkpoint),tuned_on_validation=tune,validation_candidates=[{k:v for k,v in r.items() if k!='tracks'} for r in results],manifest_sha256=hashlib.sha256(Path(manifest).read_bytes()).hexdigest(),checkpoint_sha256=hashlib.sha256(Path(checkpoint).read_bytes()).hexdigest(),pitch_range_midi=[23,88],minimum_note_seconds=.03)
+            scores.append(note_metrics(it['notes'],est,include_frames=False)['f1'])
+        results.append({'threshold':th,'frame_threshold':fr,'offset_threshold':off,'macro_note_f1':float(np.mean(scores))})
+        print('Validation candidate',th,fr,off,'note_f1',results[-1]['macro_note_f1'],flush=True)
+    best=max(results,key=lambda x:x['macro_note_f1']).copy()
+    best.update(split=split,checkpoint=str(checkpoint),tuned_on_validation=tune,validation_candidates=results,
+                manifest_sha256=hashlib.sha256(Path(manifest).read_bytes()).hexdigest(),
+                checkpoint_sha256=hashlib.sha256(Path(checkpoint).read_bytes()).hexdigest(),pitch_range_midi=[23,88],minimum_note_seconds=.03)
+    rows=[]
+    for it,p in cached:
+        est=decode(p,onset=best['threshold'],frame=best['frame_threshold'],offset=best['offset_threshold'])
+        rows.append({'id':it['id'],'dataset':it['dataset'],'part':it['part'],'group':it['group'],
+                     'reference_notes':len(it['notes']),'estimated_notes':len(est),**note_metrics(it['notes'],est),
+                     'offset_f1':note_metrics(it['notes'],est,True,include_frames=False)['f1']})
+    best['tracks']=rows;best['macro_offset_f1']=float(np.mean([r['offset_f1'] for r in rows]))
     dest=Path(out);dest.parent.mkdir(parents=True,exist_ok=True)
     predictions=dest.parent/(dest.stem+'_predictions');predictions.mkdir(exist_ok=True)
     for it,p in cached:

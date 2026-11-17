@@ -14,7 +14,7 @@ A0/A1は初期化seed17、同じ構造、AdamW、学習率0.001、batch4、4秒�
 
 ## 正解と分割
 
-公式チェックサム確認済みGuitarSet/BabySlakhの音声と正解を使います。GuitarSetは進行の同じ演奏者違い・キー違いを同じ群にまとめ、BabySlakhは元MIDIのUUIDでまとめます。元曲・派生混合音をtrain/val/testにまたがらせません。分割は固定し、検証用データで音符化の閾値を決めた後にテストを行います。
+公式チェックサム確認済みGuitarSet/BabySlakhの音声と正解を使います。GuitarSetは進行の同じ演奏者違い・キー違いを同じ群にまとめ、BabySlakhは元MIDIのUUIDでまとめます。元曲・派生混合音をtrain/val/testにまたがらせません。本プロジェクト独自の群分割なので、先行論文の公表スコアと直接比較しません。分割は固定し、検証用データで音符化の閾値を決めた後にテストを行います。
 
 現在の基礎データは421パート、独立群35。うちGuitarSet357パート、BabySlakh64パートです。派生混合音112パート（train45/val33/test34）は新しい独立曲ではありません。ギターとベースが両方とも含まれるよう、混合音は楽器別に抽出します。公表された誤注釈3パートと出力音域外を含む1パートは理由を記録して除外しています。BabySlakhは20曲の試作用合成セットで、本実験を大規模実録音評価と呼ばないでください。
 
@@ -37,6 +37,7 @@ A0/A1は初期化seed17、同じ構造、AdamW、学習率0.001、batch4、4秒�
 ```bash
 bash scripts/a_train.sh
 # 検証結果を見て設定を確定。精度が低ければ、テストを見る前に原因を調べる。
+python scripts/a_freeze.py
 bash scripts/a_test.sh
 ```
 
@@ -53,6 +54,8 @@ python -m band2tab.report summarize reports/a0_val.json \
   reports/a1_val.json reports/basic_pitch_val.json \
   --out reports/presentation_val
 ```
+
+既存モデルと2つの独自学習をまとめて固定テストする場合は、検証後に `bash scripts/a_compare_test.sh` を1度実行します。このスクリプト自身が設定を凍結するため、既に `a_freeze.py` を実行済みなら、個別のテストコマンドを使用します。
 
 `comparison.csv`、`comparison.json`、`evaluation.md`、`note_f1.png` を出力します。数値は0〜1（0.7=70%）です。発表に貼る前に、分割名がvalなのかtestなのか明示してください。長い推論は既存の予測ファイルを検証して再利用できます。
 
@@ -78,3 +81,9 @@ Azure終了前はMacのプロジェクト直下で `bash scripts/a_backup.sh`。
 - GuitarSet： https://github.com/marl/GuitarSet
 - BabySlakh： https://zenodo.org/records/4603870 （20曲の試作用セット）
 - 評価仕様： https://mir-eval.readthedocs.io/latest/api/transcription.html
+
+## 初回実験の扱い
+
+500更新の初回比較はパイロット実験です。検証Note F1はA0=0.1007、A1=0.0956、Basic Pitch=0.6738。独自モデルの精度は実用水準と呼べず、A1による改善も未確認です。主採譜を独自モデルに置き換えないでください。確認支援としての有効性もまだ測定していません。
+
+以後は学習曲数、訓練更新数、オンセットのクラス不均衡と誤検出を検証用データで調べます。追加モデルの最終比較には今回のテストを何度も最適化に使わず、Slakh reduxの重複元MIDIを除いた新しい留保群などを別に確保してください。自然な実録音と分離後の音についても別評価が必要です。
