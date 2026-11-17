@@ -10,7 +10,7 @@
 
 ## 担当A
 
-[担当Aの実行手順](docs/A_TRAINING.md)、[学習・評価・発表の指針](docs/EVALUATION.md)。データ取得、正解検査、学習、評価、バックアップを担当します。
+[担当Aの実行手順](docs/A_TRAINING.md)、[学習・評価・発表の指針](docs/EVALUATION.md)。データ取得、正解検査、学習、評価、バックアップを担当します。[初回実験結果](docs/EXPERIMENT_20261117.md)に実測値と限界を記録しています。
 
 ## 担当B / 最終Mac
 
