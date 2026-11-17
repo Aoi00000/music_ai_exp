@@ -1,0 +1,17 @@
+.venv*/
+__pycache__/
+*.pyc
+data/
+models/
+runs/
+logs/
+results/
+inputs/
+reports/
+.env
+vendor/
+downloads/
+
+backups/
+*.part
+*.tmp

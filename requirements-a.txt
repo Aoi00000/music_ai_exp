@@ -1,0 +1,10 @@
+# Azure の既存 PyTorch 2.9.1 / CUDA 12.6 は置換しない。
+numpy==1.26.4
+scipy==1.13.1
+librosa==0.10.2.post1
+soundfile==0.12.1
+pretty_midi==0.2.10
+mir_eval==0.8.2
+PyYAML==6.0.2
+setuptools<81
+contourpy==1.3.1

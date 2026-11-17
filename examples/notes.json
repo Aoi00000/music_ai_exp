@@ -1,0 +1,21 @@
+{
+  "title": "動作確認用の人工的な音符列（認識精度の評価用ではない）",
+  "parts": {
+    "guitar": [
+      {"pitch": 52, "onset": 0.0, "offset": 0.5},
+      {"pitch": 55, "onset": 0.0, "offset": 0.5},
+      {"pitch": 59, "onset": 0.0, "offset": 0.5},
+      {"pitch": 62, "onset": 0.5, "offset": 0.75},
+      {"pitch": 66, "onset": 0.5, "offset": 0.75},
+      {"pitch": 64, "onset": 1.0, "offset": 1.25},
+      {"pitch": 64, "onset": 1.25, "offset": 1.5}
+    ],
+    "bass": [
+      {"pitch": 28, "onset": 0.0, "offset": 0.75},
+      {"pitch": 33, "onset": 1.0, "offset": 1.75}
+    ]
+  },
+  "bpm": 120,
+  "beats_per_bar": 4,
+  "grid": 4
+}
