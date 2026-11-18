@@ -23,16 +23,17 @@ def role_channels(model):
     if len(set(channels))!=2:raise ValueError('Expected independent guitar/bass channels')
     return channels
 
-def prepare_protocol(info):
+def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json'):
     rows=rows_for(False);train=[r for r in rows if r['split']=='train' and r['dataset'] in ALLOWED]
-    if REPORT.name.endswith(('_expanded','_goat')):
+    goat_mode=REPORT.name.startswith('yourmt3_lora_goat')
+    if REPORT.name.endswith('_expanded') or goat_mode:
         extra=json.loads(Path('data/yourmt3_lora_extra/manifest.json').read_text())
         forbidden={r['group'] for r in json.loads(Path('data/candidate_v2/manifest.json').read_text()) if r['split']!='train'}
         if any(r['split']!='train' or r['group'] in forbidden for r in extra):raise ValueError('Expanded bass source leakage')
         train+=extra
     val=[r for r in rows if r['split']=='val'];by=defaultdict(list)
-    if REPORT.name.endswith('_goat'):
-        goat=json.loads(Path('data/goat_v1/manifest.json').read_text())
+    if goat_mode:
+        goat=json.loads(Path(goat_manifest).read_text())
         train+=[r for r in goat if r['split']=='train'];val+=[r for r in goat if r['split']=='val']
     for r in val:by[r['dataset']].append(r)
     monitor=[]
@@ -50,8 +51,9 @@ def prepare_protocol(info):
         'target_channels':'Guitar and bass only, ignore unannotated instrument channels',
         'teacher_training_only':'Author overlap trimming; held notes use ties; source annotations and evaluation labels are unchanged',
         'test_used_for_selection':False,'automatic_application_approved':False}
-    if REPORT.name.endswith(('_expanded','_goat')):report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
-    if REPORT.name.endswith('_goat'):report['goat_manifest_sha256']=sha('data/goat_v1/manifest.json')
+    if REPORT.name.endswith('_expanded') or goat_mode:report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
+    if goat_mode:report['goat_manifest_sha256']=sha(goat_manifest)
+    if goat_mode and goat_manifest!='data/goat_v1/manifest.json':report['goat_manifest_path']=goat_manifest
     path=REPORT/'protocol.json'
     if path.exists():
         if json.loads(path.read_text())!=report:raise ValueError('LoRA protocol or source changed')
@@ -135,16 +137,16 @@ def monitor(model,rows,folder):
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['smoke','train']);p.add_argument('--name',default='decoder');p.add_argument('--scope',choices=['decoder','both'],default='decoder')
     p.add_argument('--rank',type=int,default=8);p.add_argument('--alpha',type=float,default=16.);p.add_argument('--dropout',type=float,default=.05);p.add_argument('--targets',choices=['attention','wide'],default='attention')
-    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');a=p.parse_args()
+    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');p.add_argument('--goat-manifest',default='data/goat_v1/manifest.json');a=p.parse_args()
     global REPORT
     if a.extra_bass:REPORT=Path('reports/yourmt3_lora_expanded')
-    if a.goat:REPORT=Path('reports/yourmt3_lora_goat')
+    if a.goat:REPORT=Path('reports/yourmt3_lora_goat'+('_amp_v2' if a.goat_manifest!='data/goat_v1/manifest.json' else ''))
     if a.command=='train' and Path('reports/yourmt3_lora/selection.json').exists():
         raise RuntimeError('Final selection frozen; new learning requires a separate experiment and fresh holdout')
     import os
     os.environ['WANDB_MODE']='disabled';os.environ['HF_HUB_DISABLE_TELEMETRY']='1';torch.set_num_threads(2)
     random.seed(a.seed);np.random.seed(a.seed);torch.manual_seed(a.seed);torch.cuda.manual_seed_all(a.seed)
-    model,info=load_model();train,val,validation=prepare_protocol(info);channels=role_channels(model)
+    model,info=load_model();train,val,validation=prepare_protocol(info,a.goat_manifest);channels=role_channels(model)
     base_parameters=list(model.parameters());base_digest=frozen_parameter_digest(base_parameters)
     audios={}
     for r in train:
