@@ -25,15 +25,22 @@ def role_channels(model):
 
 def prepare_protocol(info):
     rows=rows_for(False);train=[r for r in rows if r['split']=='train' and r['dataset'] in ALLOWED]
-    if REPORT.name.endswith('_expanded'):
+    if REPORT.name.endswith(('_expanded','_goat')):
         extra=json.loads(Path('data/yourmt3_lora_extra/manifest.json').read_text())
         forbidden={r['group'] for r in json.loads(Path('data/candidate_v2/manifest.json').read_text()) if r['split']!='train'}
         if any(r['split']!='train' or r['group'] in forbidden for r in extra):raise ValueError('Expanded bass source leakage')
         train+=extra
     val=[r for r in rows if r['split']=='val'];by=defaultdict(list)
+    if REPORT.name.endswith('_goat'):
+        goat=json.loads(Path('data/goat_v1/manifest.json').read_text())
+        train+=[r for r in goat if r['split']=='train'];val+=[r for r in goat if r['split']=='val']
     for r in val:by[r['dataset']].append(r)
     monitor=[]
-    for ds,items in sorted(by.items()):monitor+=sorted(items,key=lambda r:hashlib.sha256(r['id'].encode()).hexdigest())[:2]
+    for ds,items in sorted(by.items()):
+        if ds.startswith('goat_'):
+            groups=sorted({r['group'] for r in items},key=lambda g:hashlib.sha256(g.encode()).hexdigest())[:2]
+            monitor+=[r for r in items if r['group'] in groups]
+        else:monitor+=sorted(items,key=lambda r:hashlib.sha256(r['id'].encode()).hexdigest())[:2]
     report={'created':'2026-11-18','source_manifest_sha256':sha('data/candidate_v2/manifest.json'),
         'base_sha256':info['checkpoint_sha256'],'train_ids':[r['id'] for r in train],
         'train_records':len(train),'train_seconds':sum(r['duration'] for r in train),
@@ -43,7 +50,8 @@ def prepare_protocol(info):
         'target_channels':'Guitar and bass only, ignore unannotated instrument channels',
         'teacher_training_only':'Author overlap trimming; held notes use ties; source annotations and evaluation labels are unchanged',
         'test_used_for_selection':False,'automatic_application_approved':False}
-    if REPORT.name.endswith('_expanded'):report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
+    if REPORT.name.endswith(('_expanded','_goat')):report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
+    if REPORT.name.endswith('_goat'):report['goat_manifest_sha256']=sha('data/goat_v1/manifest.json')
     path=REPORT/'protocol.json'
     if path.exists():
         if json.loads(path.read_text())!=report:raise ValueError('LoRA protocol or source changed')
@@ -125,9 +133,10 @@ def monitor(model,rows,folder):
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['smoke','train']);p.add_argument('--name',default='decoder');p.add_argument('--scope',choices=['decoder','both'],default='decoder')
     p.add_argument('--rank',type=int,default=8);p.add_argument('--alpha',type=float,default=16.);p.add_argument('--dropout',type=float,default=.05);p.add_argument('--targets',choices=['attention','wide'],default='attention')
-    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');a=p.parse_args()
+    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');a=p.parse_args()
     global REPORT
     if a.extra_bass:REPORT=Path('reports/yourmt3_lora_expanded')
+    if a.goat:REPORT=Path('reports/yourmt3_lora_goat')
     if a.command=='train' and Path('reports/yourmt3_lora/selection.json').exists():
         raise RuntimeError('Final selection frozen; new learning requires a separate experiment and fresh holdout')
     import os
@@ -148,11 +157,25 @@ def main():
     with torch.no_grad(),torch.autocast('cuda',dtype=torch.float16):after=model(tensor,labels)['logits']
     difference=float((before.float()-after.float()).abs().max())
     if difference>1e-5:raise ValueError('Zero adapter changes base outputs '+str(difference))
+    warmstart=None
+    if a.init_adapter:
+        previous=torch.load(a.init_adapter,map_location='cpu',weights_only=True)
+        if previous['schema']!=SCHEMA or previous['base_sha256']!=info['checkpoint_sha256']:
+            raise ValueError('Warm-start adapter uses a different frozen base or schema')
+        if not set(previous['adapters']).issubset(adapters):raise ValueError('Warm-start modules are absent from new adapter')
+        with torch.no_grad():
+            for name,state in previous['adapters'].items():
+                m=adapters[name]
+                if state['rank']!=m.rank or state['alpha']!=m.alpha:raise ValueError('Warm-start scale differs')
+                m.a.copy_(state['a']);m.b.copy_(state['b'])
+        warmstart={'sha256':sha(a.init_adapter),'modules_restored':len(previous['adapters']),
+            'source_run':previous['config']['name'],'source_step':previous['step'],'optimizer_reset':True}
     parameters=[p for p in model.parameters() if p.requires_grad];config={k:v for k,v in vars(a).items() if k!='command'}
     config.update(base_sha256=info['checkpoint_sha256'],protocol_sha256=sha(REPORT/'protocol.json'),
         trainable_parameters=sum(p.numel() for p in parameters),modules=list(adapters),target_channels=channels,
         zero_adapter_max_logit_difference=difference,token_roundtrip=roundtrip,
-        monitor_steps=sorted({min(100,a.steps),min(300,a.steps),min(600,a.steps),a.steps}))
+        warmstart=warmstart,
+        monitor_steps=sorted({min(100,a.steps),min(300,a.steps),min(600,a.steps),min(1500,a.steps),a.steps}))
     if a.command=='smoke':
         opt=torch.optim.AdamW(parameters,lr=a.lr)
         with torch.autocast('cuda',dtype=torch.float16):value=target_loss(model(tensor,labels)['logits'],labels,channels)
@@ -169,8 +192,12 @@ def main():
     for r in train:
         domain='bass' if r['dataset'] in ('filobass','filobass_guitarset_mix') else 'synth' if r['dataset']=='slakh_candidate_new' else 'guitar'
         if a.solo_balanced and domain=='bass':domain='bass_solo' if r['dataset']=='filobass' else 'bass_mix'
+        if a.goat and r['dataset'].startswith('goat_'):domain='goat'
         family[domain][r['group']].append(r)
     domains,weights=(('bass_solo','bass_mix','guitar','synth'),(.3,.25,.2,.25)) if a.solo_balanced else (('bass','guitar','synth'),(.4,.3,.3))
+    if a.goat:
+        if not a.solo_balanced:raise ValueError('GOAT experiment uses explicitly balanced solo/mix sampling')
+        domains,weights=('bass_solo','bass_mix','guitar','synth','goat'),(.2,.15,.1,.15,.4)
     history=[];running=[];updates=0;best=None;started=time.monotonic()
     with (folder/'samples.jsonl').open('w') as samples:
         for step in range(1,a.steps+1):
@@ -184,6 +211,11 @@ def main():
             with torch.autocast('cuda',dtype=torch.float16):
                 logits=model(tensor,labels)['logits'];ce=target_loss(logits,labels,channels)
                 kl=anchor_loss(logits,teacher,labels,channels) if teacher is not None else torch.zeros((),device='cuda');value=ce+a.anchor_kl*kl
+                # Other channels are genuinely absent only in known isolated
+                # instrument recordings. Full-band channels remain unlabelled.
+                if a.absent_weight and r['kind']=='solo':
+                    other=[c for c in range(logits.shape[1]) if c not in channels]
+                    value=value+a.absent_weight*target_loss(logits,labels,other)
             if not torch.isfinite(value):raise ValueError('Non-finite training loss')
             scaler.scale(value).backward();scaler.unscale_(opt);torch.nn.utils.clip_grad_norm_(parameters,1.)
             scale=scaler.get_scale();scaler.step(opt);scaler.update();updates+=int(scaler.get_scale()>=scale)

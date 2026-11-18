@@ -37,4 +37,13 @@ class LoRATests(unittest.TestCase):
         self.assertIsInstance(model.encoder['router'],nn.Linear)
         self.assertFalse(model.encoder['router'].weight.requires_grad)
 
+    def test_partial_instrument_supervision_ignores_other_channels_and_padding(self):
+        from scripts.a_yourmt3_lora import target_loss
+        logits=torch.zeros(1,13,3,5,requires_grad=True);labels=torch.zeros(1,13,3,dtype=torch.long)
+        labels[:,3,0]=1;labels[:,4,0]=2
+        target_loss(logits,labels,[3,4]).backward()
+        self.assertEqual(float(logits.grad[:,[0,1,2,5,6,7,8,9,10,11,12]].abs().sum()),0.)
+        self.assertEqual(float(logits.grad[:,:,1:].abs().sum()),0.)
+        self.assertGreater(float(logits.grad[:,3:5,0].abs().sum()),0.)
+
 if __name__=='__main__':unittest.main()
