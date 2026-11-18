@@ -44,26 +44,31 @@ def download(spec,dest):
     return {'path':str(dest.resolve()),'mirror_path':spec['path'],'bytes':spec['size'],
             'sha256':hashlib.sha256(dest.read_bytes()).hexdigest(),'mirror_hash_verified':True}
 
-def main():
+def main(root=ROOT,report=REPORT,caps=None,exclude_acquisitions=(),excluded_plugins=(),sort_salt='',budget_gib=6):
     import soundfile as sf
-    ROOT.mkdir(parents=True,exist_ok=True);REPORT.mkdir(parents=True,exist_ok=True)
-    ledger_path=REPORT/'source_acquisition.json'
+    root=Path(root);report=Path(report)
+    root.mkdir(parents=True,exist_ok=True);report.mkdir(parents=True,exist_ok=True)
+    ledger_path=report/'source_acquisition.json'
     if ledger_path.exists():raise RuntimeError('Source subset already frozen')
     previous=json.loads(Path('data/manifest_duration.json').read_text())
     used={r['group'].removeprefix('slakh_') for r in previous if r['group'].startswith('slakh_')}
     # Include the historical Baby test groups too (not in duration train/val).
     used|={r['group'].removeprefix('slakh_') for r in json.loads(Path('data/manifest_mix_diagnostic.json').read_text())}
-    caps={'train':32,'validation':8,'test':8};selected=[];rejected=[];seen=set(used);planned_bytes=0
+    for path in exclude_acquisitions:
+        used|={r['group'].removeprefix('slakh_') for r in json.loads(Path(path).read_text())['selected']}
+    caps=caps or {'train':32,'validation':8,'test':8};selected=[];rejected=[];seen=set(used);planned_bytes=0
     for split,cap in caps.items():
         dirs=[p for p in listing('data/Slakh2100_redux/'+split) if p['type']=='directory' and Path(p['path']).name.startswith('Track')]
-        dirs.sort(key=lambda p:hashlib.sha256(p['path'].encode()).hexdigest())
+        dirs.sort(key=lambda p:hashlib.sha256((sort_salt+p['path']).encode()).hexdigest())
         accepted=0
         for d in dirs:
             specs={Path(p['path']).relative_to(d['path']).as_posix():p for p in listing(d['path'],True) if p['type']=='file'}
             if 'metadata.yaml' not in specs:continue
-            folder=ROOT/split/Path(d['path']).name
+            folder=root/split/Path(d['path']).name
             meta_record=download(specs['metadata.yaml'],folder/'metadata.yaml');meta=yaml.safe_load((folder/'metadata.yaml').read_text());uuid=str(meta['UUID'])
             if uuid in seen:continue
+            if any(v.get('plugin_name') in excluded_plugins for v in meta['stems'].values()):
+                rejected.append({'track':d['path'],'reason':'training_discovered_ambiguous_plugin'});continue
             targets={p:[] for p in ('guitar','bass')};backing=[];records=[meta_record];all_valid=True
             for stem,info in meta['stems'].items():
                 cls=info.get('inst_class','').lower();part=cls if cls in targets else None
@@ -82,8 +87,8 @@ def main():
                 rejected.append({'track':d['path'],'reason':'missing_target_or_out_of_vocabulary'});continue
             wanted=sorted({'mix.flac',*[a for values in targets.values() for a in values],*[a for _,a in backing]})
             cost=sum(specs[k]['size'] for k in wanted)
-            if planned_bytes+cost>6*1024**3:raise RuntimeError('6GiB source budget reached; do not silently change frozen counts')
-            if shutil.disk_usage(ROOT).free<cost+4*1024**3:raise RuntimeError('Insufficient source disk space')
+            if planned_bytes+cost>budget_gib*1024**3:raise RuntimeError('Source byte budget reached; do not silently change frozen counts')
+            if shutil.disk_usage(root).free<cost+4*1024**3:raise RuntimeError('Insufficient source disk space')
             with ThreadPoolExecutor(max_workers=4) as pool:
                 records+=list(pool.map(lambda k:download(specs[k],folder/k),wanted))
             # Decode all selected audio, rather than accepting a header alone.
@@ -98,13 +103,13 @@ def main():
                 'split':'val' if split=='validation' else split,'folder':str(folder.resolve()),'records':records})
             print('NEW_SOURCE',split,accepted,'/',cap,Path(d['path']).name,round(planned_bytes/1024**3,3),'GiB',flush=True)
             # Incremental acquisition state survives loss of an Azure session.
-            (REPORT/'acquisition_progress.json').write_text(json.dumps({'selected':selected,'rejected':rejected},indent=2))
+            (report/'acquisition_progress.json').write_text(json.dumps({'selected':selected,'rejected':rejected},indent=2))
             if accepted==cap:break
         if accepted!=cap:raise RuntimeError('Not enough independent eligible sources')
     ledger={'mirror_repo':REPO,'revision':REV,'official_source':'https://zenodo.org/records/4599666',
         'verification':'Pinned mirror Git/LFS hashes + full audio decode + original per-stem MIDI. Official archive hash not verified.',
         'skipped_previous_uuids':sorted(used),'selected':selected,'rejected':rejected,'audio_bytes':planned_bytes,
-        'counts':caps,'test_used_for_selection':False}
+        'counts':caps,'excluded_plugins':list(excluded_plugins),'sort_salt':sort_salt,'test_used_for_selection':False}
     ledger_path.write_text(json.dumps(ledger,indent=2));print('NEW_SOURCES_FROZEN',caps,flush=True)
 
 if __name__=='__main__':main()
