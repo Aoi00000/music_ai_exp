@@ -65,8 +65,12 @@ def evaluate(tag,adapter):
     from scripts.a_yourmt3_predict import load_model,transcribe
     selection=json.load(open('reports/yourmt3_lora/development_selection.json'))
     if adapter and sha(adapter)!=selection['adapter_sha256']:raise ValueError('Only the preselected development adapter may be evaluated')
+    acquisition=json.load(open(REPORT/'acquisition.json'))
+    if sha(REPORT/'manifest.json')!=acquisition['manifest_sha256']:raise ValueError('External labels changed')
+    if any(sha(r['path'])!=r['sha256'] for r in acquisition['files']):raise ValueError('External raw source changed')
     rows=json.load(open(REPORT/'manifest.json'));manifest_sha=sha(REPORT/'manifest.json')
     torch.set_num_threads(4);model,info=load_model('cpu');adapter_sha=None
+    if info['checkpoint_sha256']!=selection['base_sha256']:raise ValueError('External evaluation base differs from selection')
     if adapter:
         state=torch.load(adapter,map_location='cpu',weights_only=True)
         if state['base_sha256']!=info['checkpoint_sha256']:raise ValueError('Adapter/base mismatch')
