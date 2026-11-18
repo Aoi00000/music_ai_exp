@@ -8,5 +8,7 @@ if [[ ! -x .venv/bin/python || ! -f app.py ]]; then
 fi
 export HF_HOME="$PWD/models/huggingface"
 export TORCH_HOME="$PWD/models/torch"
+print "Chromeで http://127.0.0.1:${BAND2TAB_PORT:-8501} を開いてください。終了はCtrl+Cです。"
 exec .venv/bin/python -m streamlit run app.py \
-  --server.address 127.0.0.1 --server.port "${BAND2TAB_PORT:-8501}" --server.headless false
+  --server.address 127.0.0.1 --server.port "${BAND2TAB_PORT:-8501}" \
+  --server.headless true --browser.gatherUsageStats false

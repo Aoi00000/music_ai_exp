@@ -23,7 +23,8 @@ Downloads権限を許可した後、専用のPython 3.12.16 / arm64をuv 0.13.8�
 既存のシステムPython 3.9.6は保持している。
 既知音符9音、issues 0、JSON／MIDI／MusicXML／TABの4ファイル生成の実行ログを確認した。
 MuseScoreを導入し、MusicXMLを開けたとの回答を受けた。
-譜面の全項目の目視確認、以下の修正版によるMac上の編集操作はこれから確認する。
+その後、MacでB用11件のテスト成功、9音・issues 0、編集画面で52→53の反映成功との回答を確認した。
+保存済みのJSON・MIDI・MusicXMLの読戻しと、譜面の全項目の目視確認は次の手順で行う。
 
 ## MacでBブランチを取得する
 
@@ -50,7 +51,8 @@ BAND2TAB_PYTHON="$PWD/.venv/bin/python" bash setup_mac.sh --score-only
 BASH
 ```
 
-期待値：B用テスト11件がOK、既知音符9音・issues 0、ブラウザにBand2Tab。
+期待値：B用テスト11件がOK、既知音符9音・issues 0、ターミナルにローカルURLが表示される。
+Chromeで `http://127.0.0.1:8501` を開く。起動時の任意のメール登録は表示しない。
 ポート8501が他のアプリで使用中なら `BAND2TAB_PORT=8502 ./Band2Tab.command`。
 終了は起動したターミナルでCtrl+C。
 
@@ -65,6 +67,17 @@ BASH
 
 issues=0は認識精度や見栄えの保証ではない。未割当・量子化衝突がある譜面を完成版としない。
 原音の秒時刻と量子化した拍位置は別に保存する。
+
+アプリを動かしたまま別のターミナルを開き、編集後の保存ファイルを照合する。
+
+```bash
+cd /Users/haruya/Downloads/music_ai_exp_B
+.venv/bin/python scripts/b_check_saved.py --example-edit --open-score
+```
+
+最新の編集結果を読み、JSONとMIDIの音高・秒時刻、弦の競合、52→53以外の音符の保持、
+既知音符例のMusicXMLの9音を検査する。検査後の譜面をMuseScoreで開く。
+複数の結果がある場合は `--notes results/ui/.../notes.json` で対象を明示できる。
 
 ## モデルを使う段階
 
