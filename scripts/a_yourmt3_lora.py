@@ -1,7 +1,7 @@
 """Supervised domain adaptation of frozen YourMT3+ with small attention LoRA.
 
-Only guitar/bass token losses are supervised; unrelated instrument channels
-are not incorrectly labelled as absent in a full-band mixture.
+Guitar/bass token losses are supervised. Optional other-channel absence is
+taught only for known isolated instruments, never an unlabelled band mixture.
 """
 from pathlib import Path
 from collections import defaultdict
