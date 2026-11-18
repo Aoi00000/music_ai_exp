@@ -23,7 +23,7 @@ def role_channels(model):
     if len(set(channels))!=2:raise ValueError('Expected independent guitar/bass channels')
     return channels
 
-def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json'):
+def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json',band_manifest=None):
     rows=rows_for(False);train=[r for r in rows if r['split']=='train' and r['dataset'] in ALLOWED]
     goat_mode=REPORT.name.startswith('yourmt3_lora_goat')
     if REPORT.name.endswith('_expanded') or goat_mode:
@@ -35,6 +35,14 @@ def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json'):
     if goat_mode:
         goat=json.loads(Path(goat_manifest).read_text())
         train+=[r for r in goat if r['split']=='train'];val+=[r for r in goat if r['split']=='val']
+    if band_manifest:
+        band=json.loads(Path(band_manifest).read_text())
+        allowed_g={r['group'] for r in train if r['dataset'].startswith('goat_')}
+        allowed_b={r['group'] for r in train if r['dataset']=='filobass'}
+        allowed_bg={r['group'] for r in json.load(open('reports/band_stress_v1/acquisition.json'))['selected'] if r['split']=='train'}
+        if any(r['split']!='train' or r['component_groups']['guitar'] not in allowed_g or r['component_groups']['bass'] not in allowed_b or r['component_groups']['background'] not in allowed_bg for r in band):
+            raise ValueError('Training mixture component leakage')
+        train+=band
     for r in val:by[r['dataset']].append(r)
     monitor=[]
     for ds,items in sorted(by.items()):
@@ -54,6 +62,7 @@ def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json'):
     if REPORT.name.endswith('_expanded') or goat_mode:report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
     if goat_mode:report['goat_manifest_sha256']=sha(goat_manifest)
     if goat_mode and goat_manifest!='data/goat_v1/manifest.json':report['goat_manifest_path']=goat_manifest
+    if band_manifest:report['band_manifest_sha256']=sha(band_manifest)
     path=REPORT/'protocol.json'
     if path.exists():
         if json.loads(path.read_text())!=report:raise ValueError('LoRA protocol or source changed')
@@ -137,16 +146,20 @@ def monitor(model,rows,folder):
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['smoke','train']);p.add_argument('--name',default='decoder');p.add_argument('--scope',choices=['decoder','both'],default='decoder')
     p.add_argument('--rank',type=int,default=8);p.add_argument('--alpha',type=float,default=16.);p.add_argument('--dropout',type=float,default=.05);p.add_argument('--targets',choices=['attention','wide'],default='attention')
-    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');p.add_argument('--goat-manifest',default='data/goat_v1/manifest.json');a=p.parse_args()
+    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');p.add_argument('--goat-manifest',default='data/goat_v1/manifest.json');p.add_argument('--monitor-steps',type=int,nargs='+');p.add_argument('--band-manifest');a=p.parse_args()
+    if a.monitor_steps and any(s<1 or s>a.steps for s in a.monitor_steps):p.error('Monitor steps must fall within the learning run')
     global REPORT
     if a.extra_bass:REPORT=Path('reports/yourmt3_lora_expanded')
     if a.goat:REPORT=Path('reports/yourmt3_lora_goat'+('_amp_v2' if a.goat_manifest!='data/goat_v1/manifest.json' else ''))
+    if a.band_manifest:
+        if not a.goat or not a.solo_balanced:p.error('Band mixtures require GOAT and balanced sampling')
+        REPORT=Path('reports/yourmt3_lora_goat_band_v1')
     if a.command=='train' and Path('reports/yourmt3_lora/selection.json').exists():
         raise RuntimeError('Final selection frozen; new learning requires a separate experiment and fresh holdout')
     import os
     os.environ['WANDB_MODE']='disabled';os.environ['HF_HUB_DISABLE_TELEMETRY']='1';torch.set_num_threads(2)
     random.seed(a.seed);np.random.seed(a.seed);torch.manual_seed(a.seed);torch.cuda.manual_seed_all(a.seed)
-    model,info=load_model();train,val,validation=prepare_protocol(info,a.goat_manifest);channels=role_channels(model)
+    model,info=load_model();train,val,validation=prepare_protocol(info,a.goat_manifest,a.band_manifest);channels=role_channels(model)
     base_parameters=list(model.parameters());base_digest=frozen_parameter_digest(base_parameters)
     audios={}
     for r in train:
@@ -179,7 +192,7 @@ def main():
         trainable_parameters=sum(p.numel() for p in parameters),modules=list(adapters),target_channels=channels,
         zero_adapter_max_logit_difference=difference,token_roundtrip=roundtrip,
         warmstart=warmstart,
-        monitor_steps=sorted({min(100,a.steps),min(300,a.steps),min(600,a.steps),min(1500,a.steps),a.steps}))
+        monitor_steps=sorted(set(a.monitor_steps+[a.steps])) if a.monitor_steps else sorted({min(100,a.steps),min(300,a.steps),min(600,a.steps),min(1500,a.steps),a.steps}))
     if a.command=='smoke':
         opt=torch.optim.AdamW(parameters,lr=a.lr)
         with torch.autocast('cuda',dtype=torch.float16):value=target_loss(model(tensor,labels)['logits'],labels,channels)
@@ -197,11 +210,13 @@ def main():
         domain='bass' if r['dataset'] in ('filobass','filobass_guitarset_mix') else 'synth' if r['dataset']=='slakh_candidate_new' else 'guitar'
         if a.solo_balanced and domain=='bass':domain='bass_solo' if r['dataset']=='filobass' else 'bass_mix'
         if a.goat and r['dataset'].startswith('goat_'):domain='goat'
+        if a.band_manifest and r['dataset'].startswith('band_training_'):domain='band'
         family[domain][r['group']].append(r)
     domains,weights=(('bass_solo','bass_mix','guitar','synth'),(.3,.25,.2,.25)) if a.solo_balanced else (('bass','guitar','synth'),(.4,.3,.3))
     if a.goat:
         if not a.solo_balanced:raise ValueError('GOAT experiment uses explicitly balanced solo/mix sampling')
         domains,weights=('bass_solo','bass_mix','guitar','synth','goat'),(.2,.15,.1,.15,.4)
+    if a.band_manifest:domains,weights=('bass_solo','bass_mix','guitar','synth','goat','band'),(.15,.1,.1,.1,.25,.3)
     history=[];running=[];updates=0;best=None;started=time.monotonic()
     with (folder/'samples.jsonl').open('w') as samples:
         for step in range(1,a.steps+1):
