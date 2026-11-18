@@ -12,7 +12,7 @@ from scripts.a_temporal_data import read_clip,clipped_truth
 def main():
     root=Path('data/goat_v1');dest=root/'manifest.json'
     if dest.exists():raise ValueError('GOAT manifest frozen')
-    selection=json.loads(Path('reports/goat/selection.json').read_text());rows=[];sources=[];canonical={}
+    selection=json.loads(Path('reports/goat/selection.json').read_text());rows=[];sources=[];canonical={};excluded=[]
     for source in selection['sources']:
         item=source['item'];folder=Path('data/raw/goat/GOAT/data')/item;mid=folder/(item+'_fine_aligned.mid')
         m=pretty_midi.PrettyMIDI(str(mid));notes=[{'pitch':int(n.pitch),'onset':float(n.start),'offset':float(n.end)} for ins in m.instruments if not ins.is_drum for n in ins.notes]
@@ -25,7 +25,10 @@ def main():
         infos={v:sf.info(p) for v,p in paths.items()};duration=min(i.duration for i in infos.values())
         # Do not silently turn an alignment/file mismatch into truncated truth.
         if max(i.duration for i in infos.values())-duration>.05 or max(n['offset'] for n in notes)>duration+.1:
-            raise ValueError('GOAT audio/label length mismatch '+item)
+            excluded.append({'item':item,'split':source['split'],'reason':'audio_or_label_length_mismatch',
+                'audio_seconds':{v:i.duration for v,i in infos.items()},'last_label_offset':max(n['offset'] for n in notes),
+                'midi_sha256':sha(mid),'action':'Quarantine all views; do not rescale labels'})
+            continue
         if duration<3.:raise ValueError('GOAT source too short '+item)
         sources.append({'item':item,'split':source['split'],'player':source['player'],'group':'goat_'+item,
             'midi_sha256':sha(mid),'midi_note_fingerprint':fingerprint,'notes':len(notes),'duration':duration,
@@ -40,13 +43,15 @@ def main():
                 ident='goat_'+item+'_'+view+'_'+str(j);out=root/'audio'/(ident+'.wav')
                 write_input(out,read_clip(path,start,length),16000);actual=sf.info(out).duration
                 y,_=sf.read(out,dtype='float32');ac=float(np.sqrt(np.mean((y-y.mean())**2)))
-                if ac<1e-7:raise ValueError('GOAT excerpt has no AC signal '+ident)
+                truth=clipped_truth({'guitar':notes},start,actual)
+                if ac<1e-7 and truth['guitar']:raise ValueError('GOAT labelled excerpt has no AC signal '+ident)
                 rows.append({'id':ident,'group':'goat_'+item,'player':source['player'],'split':source['split'],'kind':'solo',
                     'dataset':'goat_di' if view=='di' else 'goat_amp','view':view,'duration':actual,'excerpt_start':start,
                     'guard_seconds':.25,'audio':str(out.resolve()),'inputs':{'mix':str(out.resolve())},
-                    'parts':clipped_truth({'guitar':notes},start,actual),'audio_sha256':sha(out)})
+                    'parts':truth,'audio_sha256':sha(out)})
     save(dest,rows);save('reports/goat/data_protocol.json',{'manifest_sha256':sha(dest),'selection_sha256':sha('reports/goat/selection.json'),
         'counts':dict(collections.Counter(r['split'] for r in rows)),'sources':sources,
+        'excluded':excluded,'prediction_blind_qc':{'view_length_tolerance_seconds':.05,'label_release_overrun_tolerance_seconds':.1,'labelled_clip_min_ac_rms':1e-7},
         'split':'Author test preserved; player2 excluded from training. All render variants grouped by source item. Anonymous metadata cannot establish original composition disjointness.',
         'test_used_for_selection':False,'automatic_application_approved':False})
     print('GOAT_DATA_READY',collections.Counter(r['split'] for r in rows),flush=True)

@@ -110,8 +110,10 @@ def token_roundtrip(model,tokens,reference):
     return {'contained_reference_notes':len(wanted),'matched':len(used),'max_onset_error_seconds':max(onset_errors),
         'max_offset_error_seconds':max(offset_errors),'boundary_tie_references':sum(n['onset']<0<n['offset'] for n in reference)}
 
-def target_loss(logits,labels,channels):
-    return torch.stack([torch.nn.functional.cross_entropy(logits[:,c].float().reshape(-1,logits.shape[-1]),labels[:,c].reshape(-1),ignore_index=0) for c in channels]).mean()
+def channel_losses(logits,labels,channels):
+    return torch.stack([torch.nn.functional.cross_entropy(logits[:,c].float().reshape(-1,logits.shape[-1]),labels[:,c].reshape(-1),ignore_index=0) for c in channels])
+
+def target_loss(logits,labels,channels):return channel_losses(logits,labels,channels).mean()
 
 def anchor_loss(student,teacher,labels,channels):
     values=[]
@@ -209,19 +211,22 @@ def main():
             if a.anchor_kl and r['dataset'] in ('slakh_candidate_new','guitarset'):
                 with disabled(adapters),torch.no_grad(),torch.autocast('cuda',dtype=torch.float16):teacher=model(tensor,labels)['logits']
             with torch.autocast('cuda',dtype=torch.float16):
-                logits=model(tensor,labels)['logits'];ce=target_loss(logits,labels,channels)
+                logits=model(tensor,labels)['logits'];individual=channel_losses(logits,labels,channels);ce=individual.mean()
                 kl=anchor_loss(logits,teacher,labels,channels) if teacher is not None else torch.zeros((),device='cuda');value=ce+a.anchor_kl*kl
                 # Other channels are genuinely absent only in known isolated
                 # instrument recordings. Full-band channels remain unlabelled.
+                absent=torch.zeros((),device='cuda')
                 if a.absent_weight and r['kind']=='solo':
                     other=[c for c in range(logits.shape[1]) if c not in channels]
-                    value=value+a.absent_weight*target_loss(logits,labels,other)
+                    absent=target_loss(logits,labels,other);value=value+a.absent_weight*absent
             if not torch.isfinite(value):raise ValueError('Non-finite training loss')
             scaler.scale(value).backward();scaler.unscale_(opt);torch.nn.utils.clip_grad_norm_(parameters,1.)
             scale=scaler.get_scale();scaler.step(opt);scaler.update();updates+=int(scaler.get_scale()>=scale)
-            running.append([float(value.detach()),float(ce.detach()),float(kl.detach())])
+            running.append([float(value.detach()),float(ce.detach()),float(kl.detach()),
+                float(individual[0].detach()),float(individual[1].detach()),float(absent.detach())])
             if step%25==0:
-                values=np.mean(running,0);running=[];history.append({'step':step,'optimizer_updates':updates,'loss':float(values[0]),'ce':float(values[1]),'kl':float(values[2]),'seconds':time.monotonic()-started})
+                values=np.mean(running,0);running=[];history.append({'step':step,'optimizer_updates':updates,'loss':float(values[0]),'ce':float(values[1]),'kl':float(values[2]),
+                    'guitar_ce':float(values[3]),'bass_ce':float(values[4]),'other_absent_ce':float(values[5]),'seconds':time.monotonic()-started})
                 save(folder/'history.json',history);print('LORA_TRAIN',a.name,history[-1],flush=True)
             if step not in config['monitor_steps']:continue
             checkpoint=folder/('step_'+str(step)+'.pt')
