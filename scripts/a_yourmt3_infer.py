@@ -23,6 +23,7 @@ def main():
     save(a.out.with_suffix('.json'),{'audio_sha256':sha(a.audio),'base':info,'adapter_sha256':adapter_sha,
         'device':a.device,'load_seconds':loaded-started,'inference_seconds':time.monotonic()-loaded,
         'parts':{p:raw.get(p,[]) for p in ('guitar','bass')},'decoding_errors':decoding,
+        'timing_source':'Note times in seconds; raw MIDI default 120 BPM is not an estimated beat grid',
         'automatic_application_approved':False,'purpose':'Review before TAB integration'})
     print('YOURMT3_FILE_COMPLETE',a.out,a.out.with_suffix('.json'),flush=True)
 

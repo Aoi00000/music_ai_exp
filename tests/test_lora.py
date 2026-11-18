@@ -29,4 +29,12 @@ class LoRATests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'encoder'):
             inject(model,'both')
 
+    def test_wider_adapters_include_features_but_preserve_small_expert_router(self):
+        model=nn.Module();model.encoder=nn.ModuleDict({'dense':nn.Linear(64,128),'router':nn.Linear(64,8)})
+        model.decoder=nn.ModuleDict({'o':nn.Linear(64,64)})
+        adapters=inject(model,'both',rank=2,targets='wide')
+        self.assertEqual(set(adapters),{'encoder.dense','decoder.o'})
+        self.assertIsInstance(model.encoder['router'],nn.Linear)
+        self.assertFalse(model.encoder['router'].weight.requires_grad)
+
 if __name__=='__main__':unittest.main()

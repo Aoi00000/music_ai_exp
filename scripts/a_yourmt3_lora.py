@@ -43,6 +43,7 @@ def prepare_protocol(info):
         'target_channels':'Guitar and bass only, ignore unannotated instrument channels',
         'teacher_training_only':'Author overlap trimming; held notes use ties; source annotations and evaluation labels are unchanged',
         'test_used_for_selection':False,'automatic_application_approved':False}
+    if REPORT.name.endswith('_expanded'):report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
     path=REPORT/'protocol.json'
     if path.exists():
         if json.loads(path.read_text())!=report:raise ValueError('LoRA protocol or source changed')
@@ -123,10 +124,12 @@ def monitor(model,rows,folder):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['smoke','train']);p.add_argument('--name',default='decoder');p.add_argument('--scope',choices=['decoder','both'],default='decoder')
-    p.add_argument('--rank',type=int,default=8);p.add_argument('--alpha',type=float,default=16.);p.add_argument('--dropout',type=float,default=.05)
+    p.add_argument('--rank',type=int,default=8);p.add_argument('--alpha',type=float,default=16.);p.add_argument('--dropout',type=float,default=.05);p.add_argument('--targets',choices=['attention','wide'],default='attention')
     p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');a=p.parse_args()
     global REPORT
     if a.extra_bass:REPORT=Path('reports/yourmt3_lora_expanded')
+    if a.command=='train' and Path('reports/yourmt3_lora/selection.json').exists():
+        raise RuntimeError('Final selection frozen; new learning requires a separate experiment and fresh holdout')
     import os
     os.environ['WANDB_MODE']='disabled';os.environ['HF_HUB_DISABLE_TELEMETRY']='1';torch.set_num_threads(2)
     random.seed(a.seed);np.random.seed(a.seed);torch.manual_seed(a.seed);torch.cuda.manual_seed_all(a.seed)
@@ -141,14 +144,15 @@ def main():
     roundtrip=token_roundtrip(model,tokens,trace.pop('teacher_reference'))
     tensor=torch.from_numpy(x)[None,None].to('cuda');labels=torch.from_numpy(tokens).to('cuda')
     with torch.no_grad(),torch.autocast('cuda',dtype=torch.float16):before=model(tensor,labels)['logits']
-    adapters=inject(model,a.scope,a.rank,a.alpha,a.dropout);model.eval()
+    adapters=inject(model,a.scope,a.rank,a.alpha,a.dropout,a.targets);model.eval()
     with torch.no_grad(),torch.autocast('cuda',dtype=torch.float16):after=model(tensor,labels)['logits']
     difference=float((before.float()-after.float()).abs().max())
     if difference>1e-5:raise ValueError('Zero adapter changes base outputs '+str(difference))
     parameters=[p for p in model.parameters() if p.requires_grad];config={k:v for k,v in vars(a).items() if k!='command'}
     config.update(base_sha256=info['checkpoint_sha256'],protocol_sha256=sha(REPORT/'protocol.json'),
         trainable_parameters=sum(p.numel() for p in parameters),modules=list(adapters),target_channels=channels,
-        zero_adapter_max_logit_difference=difference,token_roundtrip=roundtrip)
+        zero_adapter_max_logit_difference=difference,token_roundtrip=roundtrip,
+        monitor_steps=sorted({min(100,a.steps),min(300,a.steps),min(600,a.steps),a.steps}))
     if a.command=='smoke':
         opt=torch.optim.AdamW(parameters,lr=a.lr)
         with torch.autocast('cuda',dtype=torch.float16):value=target_loss(model(tensor,labels)['logits'],labels,channels)
@@ -187,7 +191,7 @@ def main():
             if step%25==0:
                 values=np.mean(running,0);running=[];history.append({'step':step,'optimizer_updates':updates,'loss':float(values[0]),'ce':float(values[1]),'kl':float(values[2]),'seconds':time.monotonic()-started})
                 save(folder/'history.json',history);print('LORA_TRAIN',a.name,history[-1],flush=True)
-            if step not in sorted({min(100,a.steps),min(300,a.steps),a.steps}):continue
+            if step not in config['monitor_steps']:continue
             checkpoint=folder/('step_'+str(step)+'.pt')
             state={'schema':SCHEMA,'config':config,'adapters':adapter_state(adapters),'step':step,
                 'optimizer_updates':updates,'base_sha256':info['checkpoint_sha256'],'automatic_application_approved':False}

@@ -30,12 +30,15 @@ class LoRALinear(nn.Module):
             value=value+update*(self.alpha/self.rank)
         return value
 
-def inject(model,scope='decoder',rank=8,alpha=16.,dropout=.05):
+def inject(model,scope='decoder',rank=8,alpha=16.,dropout=.05,targets='attention'):
     if scope not in ('decoder','both'):raise ValueError('Unknown attention scope')
+    if targets not in ('attention','wide'):raise ValueError('Unknown adapter targets')
     for p in model.parameters():p.requires_grad_(False)
     prefixes=('decoder.',) if scope=='decoder' else ('decoder.','encoder.')
     candidates=[(name,module) for name,module in model.named_modules()
-        if isinstance(module,nn.Linear) and name.startswith(prefixes) and name.rsplit('.',1)[-1] in ('q','v','query','value')]
+        if isinstance(module,nn.Linear) and name.startswith(prefixes) and
+        ((targets=='attention' and name.rsplit('.',1)[-1] in ('q','v','query','value')) or
+         (targets=='wide' and module.out_features>=32))]
     if not candidates:raise ValueError('No compatible attention projections found')
     for prefix in prefixes:
         if not any(name.startswith(prefix) for name,_ in candidates):
@@ -61,7 +64,7 @@ def adapter_state(adapters):
 
 def restore(model,state):
     if state['schema']!=SCHEMA:raise ValueError('Unknown adapter schema')
-    config=state['config'];adapters=inject(model,config['scope'],config['rank'],config['alpha'],config['dropout'])
+    config=state['config'];adapters=inject(model,config['scope'],config['rank'],config['alpha'],config['dropout'],config.get('targets','attention'))
     if set(adapters)!=set(state['adapters']):raise ValueError('Adapter names differ from frozen base')
     with torch.no_grad():
         for name,m in adapters.items():
