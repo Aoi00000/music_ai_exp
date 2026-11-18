@@ -10,7 +10,7 @@ from scripts.a_yourmt3_predict import load_model,transcribe
 def main():
     p=argparse.ArgumentParser();p.add_argument('--adapter',type=Path);p.add_argument('--limit',type=int);p.add_argument('--tag')
     p.add_argument('--include-goat',action='store_true');p.add_argument('--split',choices=['val','test','regression'],default='val')
-    p.add_argument('--reuse-tag');a=p.parse_args()
+    p.add_argument('--reuse-tag');p.add_argument('--threads',type=int,default=4);a=p.parse_args()
     root=Path('backups/azure').resolve();manifest=root/'data/candidate_v2/manifest.json'
     rows=[r for r in json.loads(manifest.read_text()) if r['split']==a.split]
     goat_manifest=root/'data/goat_v1/manifest.json'
@@ -21,7 +21,8 @@ def main():
         if frozen['test_manifest_sha256']!=sha(manifest):raise ValueError('Test manifest changed')
         if a.include_goat and frozen['goat_manifest_sha256']!=sha(goat_manifest):raise ValueError('GOAT manifest changed')
     if a.limit:rows=rows[:a.limit]
-    torch.set_num_threads(4);model,info=load_model('cpu');adapter_sha=None
+    if a.threads<1:raise ValueError('threads must be positive')
+    torch.set_num_threads(a.threads);model,info=load_model('cpu');adapter_sha=None
     if a.adapter:
         state=torch.load(a.adapter,map_location='cpu',weights_only=True)
         if state['base_sha256']!=info['checkpoint_sha256']:raise ValueError('Adapter/base mismatch')
