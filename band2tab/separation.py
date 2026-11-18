@@ -25,7 +25,10 @@ def separate_inputs(audio,dest,model,device='cuda'):
     dest=Path(dest);dest.mkdir(parents=True,exist_ok=True)
     y,sr=sf.read(audio,dtype='float32',always_2d=True)
     if y.shape[1] not in (1,2):raise ValueError('Only mono/stereo inputs supported')
-    write_input(dest/'mix.wav',y,sr)
+    if Path(audio).resolve()!=(dest/'mix.wav').resolve():
+        write_input(dest/'mix.wav',y,sr)
+    elif sr!=16000 or y.shape[1]!=1:
+        raise ValueError('An in-place mix input must already be canonical mono 16kHz')
     if y.shape[1]==1:y=np.repeat(y,2,axis=1)
     y=resample(y,sr,model.samplerate)
     wav=torch.from_numpy(np.ascontiguousarray(y.T));ref=wav.mean(0)
