@@ -7,8 +7,22 @@ import argparse
 import json
 import numpy as np
 from scripts.a_candidate_data import save, sha
-from scripts.a_candidate_review import errors
+from scripts.a_candidate_review import errors, matching
 from scripts.a_candidate_train import KEYS
+
+
+def missed_symptoms(row, parts):
+    start=row['guard_seconds'];end=row['duration']-start if start else float('inf');result={}
+    for part in ('guitar','bass'):
+        refs=[n for n in row['parts'].get(part,[]) if start<=n['onset']<end and not n.get('censored_onset')]
+        est=[n for n in parts.get(part,[]) if start<=n['onset']<end]
+        opposite=parts.get('bass' if part=='guitar' else 'guitar',[])
+        matched={i for i,j in matching(refs,est)};missed=[n for i,n in enumerate(refs) if i not in matched]
+        result[part]={
+            'missed_with_octave_candidate':sum(any(abs(n['pitch']-m['pitch']) in (12,24) and abs(n['onset']-m['onset'])<=.05 for m in est) for n in missed),
+            'missed_with_nearby_same_pitch_attack':sum(any(n['pitch']==m['pitch'] and .05<abs(n['onset']-m['onset'])<=.2 for m in est) for n in missed),
+            'missed_with_other_instrument_candidate':sum(any(n['pitch']==m['pitch'] and abs(n['onset']-m['onset'])<=.05 for m in opposite) for n in missed)}
+    return result
 
 
 def main():
@@ -53,14 +67,16 @@ def main():
             sums = np.array([sum(v) for v in grouped]); counts = np.array([len(v) for v in grouped])
             samples = sums[draws].sum(1) / counts[draws].sum(1)
             intervals[key] = np.quantile(samples, [.025, .975]).tolist()
-        diagnostics = {}
+        diagnostics = {};symptoms={}
         for tag in (args.base, args.learned):
             cases = [errors(rows[i], records[tag][i]['parts']) for i in ids]
             diagnostics[tag] = {part: {key: sum(c[part][key] for c in cases)
                                       for key in cases[0][part]} for part in ('guitar', 'bass')}
+            examples=[missed_symptoms(rows[i],records[tag][i]['parts']) for i in ids]
+            symptoms[tag]={part:{key:sum(c[part][key] for c in examples) for key in examples[0][part]} for part in ('guitar','bass')}
         datasets[dataset] = {'conditions': len(ids), 'source_groups': len(groups),
                              'delta': delta, 'exploratory_paired_group_bootstrap_95': intervals,
-                             'errors': diagnostics}
+                             'errors': diagnostics,'missed_note_symptoms':symptoms}
     result = {'split': base['split'], 'base_tag': args.base, 'learned_tag': args.learned,
               'conditions': len(base['case_ids']), 'datasets': datasets,
               'base_summary': base['summary'], 'learned_summary': learned['summary'],
@@ -71,6 +87,7 @@ def main():
               'limitations': ['Validation intervals are descriptive after repeated model selection, not confirmatory significance.',
                               'Within-dataset source groups may share performers or compositions; these intervals do not remove that dependence.',
                               'Pretrained-model training overlap is not excluded.',
+                              'Octave/timing/instrument symptoms are overlapping candidate explanations, not proven causes or exclusive categories.',
                               'Note/frame F1 do not measure chord naming, TAB fingering, readability or natural-band usability.']}
     save(args.out, result)
     print('PAIRED_REVIEW', args.out, result['summary_delta'], flush=True)
