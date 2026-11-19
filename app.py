@@ -4,7 +4,7 @@ import json, subprocess, tempfile, shutil
 import streamlit as st
 import pandas as pd
 from band2tab.score import read_midi,write_outputs,midi_timing,active_at
-from band2tab.workflow import load_document,editor_rows,replace_part,export_document
+from band2tab.workflow import load_document,prepare_handoff,editor_rows,replace_part,export_document
 
 ROOT=Path(__file__).resolve().parent
 st.set_page_config(page_title='Band2Tab',layout='wide')
@@ -25,8 +25,22 @@ with st.expander('既知音符・音符JSONから始める（モデル不要）'
     if st.button('既知音符の例を開く'):
         load_notes(load_document((ROOT/'examples/notes.json').read_text(encoding='utf-8')))
     notes_upload=st.file_uploader('音符JSON',type=['json'])
+    reference_audio=st.file_uploader('比較用の原音（JSONと同じ時刻原点）',type=['wav','mp3','flac','m4a','ogg'])
+    if reference_audio:
+        st.audio(reference_audio.getvalue())
+    note_set=st.radio('AのJSONに補正案が含まれる場合',['raw','corrected'],
+        format_func=lambda x:'補正前の音符（既定）' if x=='raw' else '補正案（比較・確認用）')
+    fixed_tempo=st.checkbox('原音で確認した一定BPM・拍子・分割を指定する',value=False)
+    json_bpm=st.number_input('JSONの記譜用BPM',min_value=20.,max_value=400.,value=120.,disabled=not fixed_tempo)
+    json_meter=st.selectbox('JSONの拍子',[4,3],format_func=lambda x:f'{x}/4',disabled=not fixed_tempo)
+    json_grid=st.selectbox('JSONの1拍の分割数',[4,3],format_func=lambda x:'16分' if x==4 else '8分3連',disabled=not fixed_tempo)
+    st.caption('JSONに曲のBPMがない場合は確認値が必要です。MIDIに仮で書かれた120 BPMを曲のテンポとして扱いません。')
     if st.button('音符JSONを読み込む',disabled=notes_upload is None):
-        try:load_notes(load_document(notes_upload.getvalue()))
+        try:
+            document=json.loads(notes_upload.getvalue())
+            load_notes(prepare_handoff(document,note_set,
+                bpm=json_bpm if fixed_tempo else None,
+                meter=json_meter if fixed_tempo else None,grid=json_grid if fixed_tempo else None))
         except (ValueError,KeyError,TypeError) as exc:st.error(str(exc))
 
 upload=st.file_uploader('音声・動画ファイル',type=['wav','mp3','flac','m4a','mp4','mov','mid','midi'])
@@ -92,6 +106,11 @@ if 'score' in st.session_state:
     if (run/'input.wav').exists():st.audio(str(run/'input.wav'))
     if j['issues']:st.warning(f"要確認: {len(j['issues'])}件。未割当・量子化衝突はJSONに残しています。")
     else:st.success('未割当・量子化衝突は0件です。譜面と原音を確認してください。')
+    if j.get('source_corrector_applied'):
+        if j.get('displayed_note_set')=='corrected':st.warning('補正案を表示しています。原音・補正前と比較して確認してください。')
+        else:st.info('補正前の音符を表示しています。補正案と元の音符は保存JSONに保持しています。')
+    if j.get('notation_tempo_source'):
+        st.caption(f"記譜用テンポ: {j['bpm']:g} BPM / {'原音で確認した一定BPM' if j['notation_tempo_source']=='user_confirmed_fixed' else '入力JSONの設定'}。編集後は反映済みの音符を表示します。")
     st.subheader('ギター＋ベース：時刻を指定して音を確認')
     if j.get('analysis_scope')=='single_part':st.info('この入力は単一パートです。ギターとベースを合わせて確認する場合は、原音をMuScriptorで解析してください。')
     inspection=dict(j['parts'])

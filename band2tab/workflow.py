@@ -61,6 +61,44 @@ def load_document(data):
         raise ValueError('音符JSONの必須項目・型を確認してください。') from exc
 
 
+def prepare_handoff(document, note_set='raw', bpm=None, meter=None, grid=None):
+    """Select A's raw/corrected notes explicitly and require real notation tempo."""
+    if note_set not in ('raw', 'corrected'):
+        raise ValueError('音符の選択が不正です。')
+    if not isinstance(document, dict):
+        raise ValueError('音符JSONはオブジェクトで指定してください。')
+    result = deepcopy(document)
+    corrected = result.get('corrector_applied') is True
+    has_proposal = corrected or (result.get('source_corrector_applied') is True and isinstance(result.get('proposed_parts'), dict))
+    if has_proposal and not isinstance(result.get('raw_parts'), dict):
+        raise ValueError('補正前のraw_partsがありません。A担当から比較用JSONを受け取ってください。')
+    if has_proposal:
+        proposal = document['parts'] if corrected else document['proposed_parts']
+        baseline = document['raw_parts'] if corrected else document['parts']
+        result['proposed_parts'] = deepcopy(proposal)
+        result['parts'] = deepcopy(baseline if note_set == 'raw' else proposal)
+        result['source_corrector_applied'] = True
+        result['corrector_applied'] = note_set == 'corrected'
+    elif note_set == 'corrected':
+        raise ValueError('このJSONには補正案がありません。補正前を選択してください。')
+    result['displayed_note_set'] = note_set
+    if bpm is not None:
+        if result.get('beat_times') is not None:
+            result['source_beat_times'] = deepcopy(result['beat_times'])
+            result.pop('beat_times')
+        result.update(bpm=bpm, notation_tempo_confirmed=True,
+                      notation_tempo_source='user_confirmed_fixed')
+    elif result.get('bpm') is None or (result.get('midi_tempo_is_placeholder') and not result.get('notation_tempo_confirmed')):
+        raise ValueError('曲のBPMが未確認です。原音でBPMと拍子を確認し、一定BPMの指定にチェックしてください。')
+    else:
+        result.setdefault('notation_tempo_source', 'input_json')
+    if meter is not None:
+        result['beats_per_bar'] = meter
+    if grid is not None:
+        result['grid'] = grid
+    return validate_document(result)
+
+
 def editor_rows(document, part):
     return [dict(_row=i, pitch=n['pitch'], onset=n['onset'], offset=n['offset'],
                  velocity=n.get('velocity', 80)) for i, n in enumerate(document['parts'][part])]

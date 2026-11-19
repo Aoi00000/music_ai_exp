@@ -1,6 +1,7 @@
 """B's score/editor acceptance tests; no acoustic models or network required."""
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -8,7 +9,7 @@ import xml.etree.ElementTree as ET
 import pretty_midi
 
 from band2tab.score import assign_frets, quantize, TUNINGS, active_at
-from band2tab.workflow import load_document, validate_document, editor_rows, replace_part, export_document
+from band2tab.workflow import load_document, validate_document, prepare_handoff, editor_rows, replace_part, export_document
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -173,6 +174,8 @@ class ScoreWorkflow(unittest.TestCase):
         self.assertFalse(app.exception)
         next(b for b in app.button if b.label == '既知音符の例を開く').click().run()
         self.assertFalse(app.exception)
+        # Keep AppTest's artificial edits out of the user's latest-saved lookup.
+        self.addCleanup(shutil.rmtree,Path(app.session_state.run),ignore_errors=True)
         self.assertTrue(app.success)
         folder = Path(app.session_state.output_dir)
         self.assertEqual(len(json.loads((folder / 'notes.json').read_text())['parts']['guitar']), 7)
@@ -181,6 +184,54 @@ class ScoreWorkflow(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertNotEqual(Path(app.session_state.output_dir),folder)
         self.assertTrue((folder/'notes.json').exists())
+
+    def test_a_handoff_defaults_to_raw_and_retains_the_correction_proposal(self):
+        source=dict(parts={'guitar':[dict(pitch=64,onset=0.,offset=.5)]},
+                    raw_parts={'guitar':[dict(pitch=60,onset=.1,offset=.6)]},
+                    corrector_applied=True,midi_tempo_is_placeholder=True,source_sha256='recording-A')
+        with self.assertRaisesRegex(ValueError,'BPM'):
+            prepare_handoff(source)
+        baseline=prepare_handoff(source,bpm=96.,meter=3,grid=4)
+        proposed=prepare_handoff(source,note_set='corrected',bpm=96.)
+        self.assertEqual(baseline['parts'],source['raw_parts'])
+        self.assertEqual(baseline['proposed_parts'],source['parts'])
+        self.assertFalse(baseline['corrector_applied'])
+        self.assertTrue(baseline['source_corrector_applied'])
+        self.assertEqual(proposed['parts'],source['parts'])
+        self.assertTrue(proposed['corrector_applied'])
+        self.assertEqual(baseline['source_sha256'],'recording-A')
+        self.assertEqual(source['parts']['guitar'][0]['pitch'],64)
+        with tempfile.TemporaryDirectory() as d:
+            export_document(baseline,d)
+            saved=json.loads((Path(d)/'notes.json').read_text())
+            self.assertEqual(saved['raw_parts'],source['raw_parts'])
+            self.assertEqual(saved['proposed_parts'],source['parts'])
+            self.assertEqual(saved['bpm'],96.)
+            self.assertEqual(prepare_handoff(saved,note_set='corrected')['parts'],source['parts'])
+            rows=editor_rows(saved,'guitar');rows[0]['pitch']=61
+            edited=replace_part(saved,'guitar',rows)
+            self.assertEqual(prepare_handoff(edited)['parts']['guitar'][0]['pitch'],61)
+
+    def test_a_handoff_does_not_assume_midi_placeholder_is_the_song_tempo(self):
+        document=dict(self.document,midi_tempo_is_placeholder=True)
+        with self.assertRaisesRegex(ValueError,'BPM'):
+            prepare_handoff(document)
+        confirmed=prepare_handoff(document,bpm=100.)
+        self.assertEqual(prepare_handoff(confirmed)['bpm'],100.)
+        self.assertEqual(prepare_handoff(self.document)['bpm'],120.)
+        with self.assertRaisesRegex(ValueError,'補正案'):
+            prepare_handoff(self.document,note_set='corrected')
+        with self.assertRaisesRegex(ValueError,'raw_parts'):
+            prepare_handoff(dict(self.document,corrector_applied=True))
+
+    def test_manual_handoff_tempo_override_keeps_the_source_beat_map(self):
+        document=dict(self.document,beat_times=[0.,.5,1.5,2.5])
+        unchanged=prepare_handoff(document)
+        self.assertEqual(unchanged['beat_times'],document['beat_times'])
+        fixed=prepare_handoff(document,bpm=96.,meter=3,grid=3)
+        self.assertNotIn('beat_times',fixed)
+        self.assertEqual(fixed['source_beat_times'],document['beat_times'])
+        self.assertEqual((fixed['bpm'],fixed['beats_per_bar'],fixed['grid']),(96.,3,3))
 
 
 if __name__ == '__main__':
