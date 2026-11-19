@@ -1,0 +1,85 @@
+{
+  "weights_included": false,
+  "weights": [
+    {
+      "path": "models/muscriptor-medium/model.safetensors",
+      "bytes": 1228144472,
+      "sha256": "ac80adbdf85d87231735fd948af7013441c0afced316c4e9067fd5d8a7fb97ec"
+    },
+    {
+      "path": "models/torch/hub/checkpoints/5c90dfd2-34c22ccb.th",
+      "bytes": 54996327,
+      "sha256": "34c22ccb381c6f9fdbf324f04e1e2fe21aaaf293f5ded163a162697ff9a02ddd"
+    },
+    {
+      "path": "models/yourmt3_lora_augmentation_review.pt",
+      "bytes": 9703499,
+      "sha256": "60c100d4c55f6b816b5ef9ef291da91052498a93e1b8a9df68d47d720b3dad5b"
+    },
+    {
+      "path": "models/addition_jazz_v3_review.pt",
+      "bytes": 10405,
+      "sha256": "aa11b40eca6fa39bdf7b7063448a459aacca238216487192e76c47c32db7b068"
+    },
+    {
+      "path": "models/octave_filter_review.pt",
+      "bytes": 10189,
+      "sha256": "876f1821c52ca90bfe7359f30b388d418450eada308d023e01737f97b956a055"
+    },
+    {
+      "path": "vendor/yourmt3/amt/logs/2024/mc13_256_g4_all_v7_mt3f_sqr_rms_moe_wf4_n8k2_silu_rope_rp_b36_nops/checkpoints/last.ckpt",
+      "bytes": 561544628,
+      "sha256": "ae38e415c79efd5592dcb9b658cdb99ddb11d4c4e1eaa364cab04a052473fc25"
+    },
+    {
+      "path": "vendor/lv-chordia/weights/joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s0.best.sdict",
+      "bytes": 5746183,
+      "sha256": "921b42d5d1cf9ce1c0c0e45a74d409b8066e0acec46058ef74e24ee0fb540761"
+    },
+    {
+      "path": "vendor/lv-chordia/weights/joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s1.best.sdict",
+      "bytes": 5746175,
+      "sha256": "bcb75859e0efa256696cf5da396b320093317b9b1d9560c304f46c25fe1f8b17"
+    },
+    {
+      "path": "vendor/lv-chordia/weights/joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s2.best.sdict",
+      "bytes": 5746179,
+      "sha256": "acddf85c3fff29954c4877021177d72e2cba9f729ce80c1010f054c477bf3f61"
+    },
+    {
+      "path": "vendor/lv-chordia/weights/joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s3.best.sdict",
+      "bytes": 5746175,
+      "sha256": "65d81a3ab73435aaaade586981b4cabdf57b8953d76052703e6968c32ef8421c"
+    },
+    {
+      "path": "vendor/lv-chordia/weights/joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s4.best.sdict",
+      "bytes": 5746227,
+      "sha256": "5ff6b0ec85640e17a09a9b3de68c93fdd45adc24488e8fa9be5715c28d561122"
+    }
+  ],
+  "models": {
+    "separator": "htdemucs_6s / Demucs 4.0.1",
+    "transcriber": "MuScriptor medium / muscriptor 0.4.0",
+    "proposal": "YourMT3+ with augmentation LoRA; frozen",
+    "addition": "addition_jazz_v3_review; threshold in checkpoint",
+    "octave": "octave_filter_review; threshold in checkpoint",
+    "chords": "published 5-fold CRNN ensemble; no project chord-head checkpoint"
+  },
+  "configuration": {
+    "device": "cpu",
+    "dtype": "float32",
+    "mu_native_instrument_conditioning": false,
+    "role_policy": "Every non-drum event from the estimated G/B stem assigned to that source",
+    "demucs_seed": 1397947597,
+    "demucs_shifts": 1,
+    "demucs_overlap": 0.25,
+    "demucs_segment_seconds": 7,
+    "note_time_unit": "seconds",
+    "crop_or_time_shift_after_input": false,
+    "tempo_detection_in_mu": false,
+    "app_auto_replacement": false
+  },
+  "git_commit": "42fdca48d6ff74b877e18307ff79a4813e9a3865",
+  "pipeline_sha256": "d3da83a7e3c0521939e309e7e2a0b36e92004248a8e3854959056ab088626108",
+  "addition_script_sha256": "abd3662467f52f2ff6a18d4671377d8e8fe241d528613dfe86e900f772e4c015"
+}

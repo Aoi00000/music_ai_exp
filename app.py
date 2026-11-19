@@ -11,6 +11,13 @@ st.set_page_config(page_title='Band2Tab',layout='wide')
 st.title('Band2Tab')
 st.caption('音声・動画からギター／ベースのTAB下書きを作成し、音を確かめながら修正します。')
 
+import os
+mode=st.sidebar.radio('作業画面',['従来の譜面編集','A/B結合確認（秒表示）'],index=1 if os.environ.get('BAND2TAB_MODE')=='integration' else 0)
+if mode=='A/B結合確認（秒表示）':
+    from band2tab.integration_ui import render
+    render()
+    st.stop()
+
 def new_run():
     folder=ROOT/'results'/'ui';folder.mkdir(parents=True,exist_ok=True)
     return Path(tempfile.mkdtemp(prefix='band2tab_',dir=folder))
