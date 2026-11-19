@@ -1,0 +1,99 @@
+{
+  "pdf": "output/pdf/band2tab_beginner_presentation_20261119.pdf",
+  "sha256": "6582fda42236fdfd6ec9ff7f5c8da3818f995d59bd706e47f2c43908346b670c",
+  "pages": 63,
+  "main_pages": 40,
+  "appendix_pages": 23,
+  "all_pages_rendered_and_visually_reviewed": true,
+  "text_and_table_box_overlap_guard_passed": true,
+  "required_terms_checked": [
+    "TP",
+    "FP",
+    "FN",
+    "Frame F1",
+    "終了F1",
+    "全音一致",
+    "unconditioned",
+    "conditioned_cfg1",
+    "unfiltered_union",
+    "LoRA",
+    "CRNN",
+    "GuitarSet",
+    "FiloBass",
+    "GOAT",
+    "MUSDB",
+    "0.8718",
+    "0.8234",
+    "0.9154",
+    "23.5%",
+    "11/25",
+    "ギター90音"
+  ],
+  "reference_links": 10,
+  "metric_examples_recomputed_with_project_evaluator": true,
+  "metric_examples": {
+    "long": {
+      "note_f1": 1.0,
+      "note_tp": 1,
+      "note_fp": 0,
+      "note_fn": 0,
+      "offset_f1": 0.0,
+      "by_part": {
+        "guitar": {
+          "reference_notes": 1,
+          "reference_frames": 50,
+          "note_f1": 1.0,
+          "frame_f1": 0.6666666666666666
+        },
+        "bass": {
+          "reference_notes": 0,
+          "reference_frames": 0,
+          "note_f1": 0.0,
+          "frame_f1": 0.0
+        }
+      },
+      "frame_f1": 0.6666666666666666,
+      "frame_tp": 50,
+      "frame_fp": 50,
+      "frame_fn": 0,
+      "union_frame_f1": 0.6666666666666666,
+      "active_exact_match": 0.5
+    },
+    "repick": {
+      "note_f1": 0.6666666666666666,
+      "note_tp": 1,
+      "note_fp": 0,
+      "note_fn": 1,
+      "offset_f1": 0.0,
+      "by_part": {
+        "guitar": {
+          "reference_notes": 2,
+          "reference_frames": 50,
+          "note_f1": 0.6666666666666666,
+          "frame_f1": 1.0
+        },
+        "bass": {
+          "reference_notes": 0,
+          "reference_frames": 0,
+          "note_f1": 0.0,
+          "frame_f1": 0.0
+        }
+      },
+      "frame_f1": 1.0,
+      "frame_tp": 50,
+      "frame_fp": 0,
+      "frame_fn": 0,
+      "union_frame_f1": 1.0,
+      "active_exact_match": 1.0
+    }
+  },
+  "regression_tests": {
+    "command": ".venv-yourmt3/bin/python -m unittest discover -s tests -q",
+    "passed": 87
+  },
+  "no_pptx_created": true,
+  "azure_started_for_this_task": false,
+  "azure_last_status": "PowerState/deallocated",
+  "handoff_audit": "docs/measurements/B_HANDOFF_20261119.json",
+  "gui_integration_verified": false
+}
