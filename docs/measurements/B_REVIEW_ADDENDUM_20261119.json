@@ -1,0 +1,30 @@
+{
+  "archive": "output/handoff/band2tab_review_addendum_20261119.zip",
+  "sha256": "a840d86e4e689afe221a31011d2c42181af2b59bd86f10dabf623811b287a747",
+  "bytes": 272540,
+  "members": 7,
+  "all_member_sha256_verified": true,
+  "base_archive": "output/handoff/band2tab_AB_integration_20261119.zip",
+  "base_archive_sha256": "ba6ebcd6a1c6f4c1f3e1f8484ef5c9c55e30a8ff3894c42f1171644a687b71ba",
+  "source_id": "ref_mix_Track00013",
+  "baseline_counts": {
+    "guitar": 90,
+    "bass": 134
+  },
+  "suggested_counts": {
+    "guitar": 90,
+    "bass": 134
+  },
+  "identity_on_fixture": true,
+  "independent_test": false,
+  "automatic_application_approved": false,
+  "bpm": null,
+  "meter": null,
+  "first_downbeat_seconds": null,
+  "muscriptor_sha256": "ac80adbdf85d87231735fd948af7013441c0afced316c4e9067fd5d8a7fb97ec",
+  "source_analysis_sha256": "3063dcf49c64e5e2e2b2ab3d1dc1b366ffd16b4d43ccc85ba25a8ba402e1b341",
+  "model_sha256": {
+    "weights/bass_sound_keep_review.pt": "6bc82f518c3d508a9a6608cc5cc2d945120c77824feaaee18ddb454c07a8792c",
+    "weights/octave_filter_review.pt": "876f1821c52ca90bfe7359f30b388d418450eada308d023e01737f97b956a055"
+  }
+}

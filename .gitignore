@@ -17,3 +17,4 @@ backups/
 *.tmp
 tmp/pdfs/
 output/handoff/
+.DS_Store
