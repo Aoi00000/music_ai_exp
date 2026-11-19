@@ -1,0 +1,20 @@
+[
+  {
+    "archive": "audio_mono-mic.zip",
+    "archive_size": 656927981,
+    "member": "00_BN1-129-Eb_comp_mic.wav",
+    "bytes": 1969056,
+    "sha256": "59e1e3c9bebdabd48afe28050a2c031e6cf36e5697268301cdf2e74bc66b71f1",
+    "crc32": "3cafca06",
+    "network_bytes": 974178
+  },
+  {
+    "archive": "annotation.zip",
+    "archive_size": 39132574,
+    "member": "00_BN1-129-Eb_comp.jams",
+    "bytes": 1702653,
+    "sha256": "cd79564c51d0dec7d04e010d31525e9f7d2b9d41cf6116118a66ac5a8c181007",
+    "crc32": "37f64523",
+    "network_bytes": 151052
+  }
+]
