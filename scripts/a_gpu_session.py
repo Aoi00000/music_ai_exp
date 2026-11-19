@@ -13,6 +13,8 @@ def main():
     if not a.command:p.error('Supply an explicit workload command')
     root=Path(__file__).resolve().parents[1];os.chdir(root)
     subprocess.run([sys.executable,'scripts/a_azure.py','assert-ready'],check=True)
+    report=Path('reports/azure_session_cleanup.json');report.parent.mkdir(exist_ok=True)
+    report.write_text(json.dumps({'status':'workload_running','deallocated':False,'backup_checkpoints_verified':False},indent=2))
     workload=None;backup=False;stopped=False;failure=None;stop_failure=None;workload_failure=None
     def interrupted(signum,frame):raise KeyboardInterrupt('Interrupted; backing up and deallocating')
     signal.signal(signal.SIGTERM,interrupted)

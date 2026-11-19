@@ -13,7 +13,7 @@ FOLDERS=('data/candidate_v2','data/raw/slakh_candidate_v2','data/yourmt3_lora_ex
     'data/bass_augmentation_v1','data/bass_retention_v1','data/raw/musdb_retention_7s','data/stem_refiner_v1',
     'reports/candidate_v2','reports/yourmt3','reports/yourmt3_lora','reports/yourmt3_lora_expanded',
     'reports/yourmt3_lora_goat','reports/yourmt3_lora_goat_amp_v2','reports/yourmt3_lora_goat_band_v1','reports/yourmt3_final','reports/goat','reports/band_stress_v1','reports/band_training_v1',
-    'reports/bass_augmentation_v1','reports/bass_retention_v1','reports/yourmt3_retention','reports/band_hybrid_v1','reports/stem_refiner_v1','runs/stem_refiner_v1',
+    'reports/bass_augmentation_v1','reports/bass_retention_v1','reports/yourmt3_retention','reports/band_hybrid_v1','reports/stem_refiner_v1','runs/stem_refiner_v1','reports/tone_v1',
     'runs/candidate_v2','runs/yourmt3_lora','vendor/yourmt3')
 
 def create():

@@ -41,6 +41,21 @@ PYTHONPATH="$PWD" .venv-mu/bin/python -m scripts.a_band_pipeline \
 
 ## 4. 譜面との接続
 
+### 新しい補完案を比較する
+
+元Muの音を保持したまま、学習で選別した未検出ギター候補を別のJSONへ出す処理を追加した。終了補正モデルは全音一致の保護基準に届かず不採用。新しい候補も開発・回帰確認段階なので、元の出力を自動的に置き換えない。
+
+次は前節で作った`results/song_baseline`に対して実行する。YourMT3専用環境を使うため`PYTHONPATH`も含めて指定する。
+
+```bash
+PYTHONPATH="$PWD/vendor/yourmt3_deps:$PWD/vendor/yourmt3/amt/src:$PWD/vendor/yourmt3:$PWD" \
+  HF_HUB_DISABLE_TELEMETRY=1 WANDB_MODE=disabled OMP_NUM_THREADS=2 \
+  .venv-yourmt3/bin/python -m scripts.a_addition_apply results/song_baseline \
+  --out results/song_addition_review
+```
+
+`notes.json`の`parts`と`raw_parts`は元Mu、`suggested_parts`が学習した追加候補。Bは両者を切り替えて確認できる。同じコマンドに`--octave-filter models/octave_filter_review.pt`を付けると、近接するオクターブ音の学習した除外案も組み合わせる。原結果は残り、ベースの音高・時刻は動かさない。この指定は自動採用の承認を意味しない。3秒の保存済み入力で補完のみの処理を約7.7秒で確認したが、任意の曲の時間・精度を保証する値ではない。
+
 生の秒単位音符を保存し、量子化・運指割当で元の結果を上書きしない。モデルがMIDIに書く120 BPMは仮の値であり、曲のテンポではない。利用者が確認したBPMを指定した場合だけ、この処理は譜面用`score_input.json`を作る。
 
 ```bash
@@ -52,7 +67,33 @@ PYTHONPATH="$PWD" .venv-yourmt3/bin/python -m band2tab score-json \
 
 `96`は例なので実際のテンポへ置き換える。4拍子等の譜面設定も確認する。変拍子・テンポ変化・3連符・奏法記号・複数ギターのパート分けは、この認識評価で精度検証していない。弦が足りない音を消したり別音高へ移したりせず、要確認として残す。
 
-## 5. Azureの安全な終了
+## 5. 曲のコード譜も書き出す
+
+コード認識の現行実装はCQT＋CNN/双方向LSTMの公開5モデル。BTCは採用していない。MuScriptorの音符認識と別経路で、原ミックスからコード名を推定する。今回の音符F1はコード認識の精度ではない。
+
+このMacには固定版lv-chordiaの重み5個を配置・読込確認済み。別のMacでは一度だけ準備する。
+
+```bash
+PYTHONPATH="$PWD" .venv-yourmt3/bin/python -m chordchart.setup bootstrap
+OMP_NUM_THREADS=2 PYTHONPATH="$PWD" .venv-yourmt3/bin/python \
+  -m chordchart.export '/absolute/path/song.mp4' --out results/song_chords
+```
+
+`chord_chart.html`をブラウザで開く。印刷からPDF保存できる。`chords.csv`と`chords.json`も保存する。小節頭が不明な場合は秒表示で、存在しない拍子や小節線を作らない。一定テンポと小節頭を確認できた場合だけ、次のように指定する。96、1.2、4はいずれも例。
+
+```bash
+OMP_NUM_THREADS=2 PYTHONPATH="$PWD" .venv-yourmt3/bin/python \
+  -m chordchart.export '/absolute/path/song.mp4' --out results/song_chords_bars \
+  --bpm 96 --first-downbeat 1.2 --beats-per-bar 4
+```
+
+既存の解析JSONから、再推論せず整形するには入力をそのJSONへ変え、`--json`を付ける。Bは`chordchart.export.write_chart`を呼び、画面のコード進行と同じJSONからダウンロードを作れる。既存の`band2tab.harmony.annotate_score`はTABのMusicXMLにコード記号を重ねる。複雑なコード・分数コードを簡単な三和音へ黙って置き換えない。
+
+今回、新しいpower用12行だけを学習したコードモデルを`models/chord_head_review.pt`へ保存した。比較用として明示する場合だけ、上のコマンドへ`--checkpoint models/chord_head_review.pt`を追加する。既存画面の詳細設定にも、この重みがあるMacだけ「追加学習した候補（比較用）」を追加した。標準の5モデル経路は変更していない。18開発録音では小幅な改善だが、複雑なコードやC5の高精度な認識は未達である。
+
+現在のHTMLは表記・ファイル入出力を確認した下書きで、任意の楽曲で正しいコード名を保証するものではない。時間ごとの音符一覧も別に残し、コードの誤認識を確認する材料にする。
+
+## 6. Azureの安全な終了
 
 Azure CLIは本人の許可を得て接続済み。認証情報はGit対象外の`vendor/private/azure_cli`に保存する。この場所を共有・コミットしない。
 

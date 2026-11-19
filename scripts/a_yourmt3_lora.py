@@ -151,7 +151,8 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['smoke','train']);p.add_argument('--name',default='decoder');p.add_argument('--scope',choices=['decoder','both'],default='decoder')
     p.add_argument('--rank',type=int,default=8);p.add_argument('--alpha',type=float,default=16.);p.add_argument('--dropout',type=float,default=.05);p.add_argument('--targets',choices=['attention','wide'],default='attention')
     p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');p.add_argument('--goat-manifest',default='data/goat_v1/manifest.json');p.add_argument('--monitor-steps',type=int,nargs='+');p.add_argument('--band-manifest')
-    p.add_argument('--augmentation-manifest');p.add_argument('--retention-cache',type=Path);p.add_argument('--retention-rate',type=float,default=.35);a=p.parse_args()
+    p.add_argument('--augmentation-manifest');p.add_argument('--retention-cache',type=Path);p.add_argument('--retention-rate',type=float,default=.35)
+    p.add_argument('--tone-augment',action='store_true');a=p.parse_args()
     if not 0<=a.retention_rate<1:p.error('Retention rate must be within [0,1)')
     if a.monitor_steps and any(s<1 or s>a.steps for s in a.monitor_steps):p.error('Monitor steps must fall within the learning run')
     global REPORT
@@ -247,6 +248,14 @@ def main():
                 gt_steps+=1
                 domain=random.choices(domains,weights)[0];group=random.choice(sorted(family[domain]));r=random.choice(family[domain][group])
                 x,tokens,trace=sample(r,audios[r['id']],model,a.pitch_augment)
+                if a.tone_augment:
+                    import hashlib
+                    from band2tab.augment import tone_colour
+                    # Independent RNG preserves the control's source/crop order.
+                    key=f"tone-v1-{a.seed}-{step}-{r['id']}-{trace['start_sample']}"
+                    seed=int(hashlib.sha256(key.encode()).hexdigest()[:16],16)
+                    allow_drive=r['kind']=='solo' and bool(r['parts'].get('guitar')) and not r['parts'].get('bass')
+                    x,trace['tone_augmentation']=tone_colour(x,model.audio_cfg['sample_rate'],seed,allow_drive)
                 tensor=torch.from_numpy(x)[None,None].to('cuda');labels=torch.from_numpy(tokens).to('cuda')
             samples.write(json.dumps({'step':step,**trace})+'\n')
             for m in adapters.values():m.train()

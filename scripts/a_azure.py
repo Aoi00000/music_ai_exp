@@ -32,11 +32,15 @@ def power_state():
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['assert-ready','status','deallocate']);a=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['assert-ready','status','start','deallocate']);a=parser.parse_args()
     # Read the account without printing personal account information or tokens.
     account=json.loads(cli('account','show','--subscription',SUBSCRIPTION,'-o','json'))
     if account.get('id','').lower()!=SUBSCRIPTION:raise ValueError('Unexpected Azure subscription')
-    if a.command=='deallocate':
+    if a.command=='start':
+        cli('vm','start','--subscription',SUBSCRIPTION,'--resource-group',GROUP,'--name',VM)
+        state=power_state()
+        if state!='PowerState/running':raise RuntimeError('VM start has not reached running state')
+    elif a.command=='deallocate':
         cli('vm','deallocate','--subscription',SUBSCRIPTION,'--resource-group',GROUP,'--name',VM)
         for _ in range(12):
             state=power_state()

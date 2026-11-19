@@ -2,6 +2,24 @@
 import numpy as np
 
 
+def tone_colour(audio,sr,seed,allow_drive=False):
+    """Seed-local zero-phase EQ, optional memoryless drive; no clock warp.
+
+    Only gold isolated guitar receives extra drive. Mixed audio receives EQ.
+    This is synthetic tone diversity, not additional independent performances.
+    """
+    x=np.asarray(audio,np.float32);rng=np.random.default_rng(seed);rms=float(np.sqrt(np.mean(x*x)))
+    if rms<1e-7 or rng.random()>=.75:return x.copy(),{'identity':True}
+    low,high,bell=rng.uniform(-6,6,3);center=float(rng.choice([500.,1000.,2000.]))
+    f=np.maximum(np.fft.rfftfreq(len(x),1/sr),1.)
+    db=low/(1+(f/180.)**2)+high/(1+(2500./f)**2)+bell*np.exp(-.5*(np.log2(f/center)/.8)**2)
+    y=np.fft.irfft(np.fft.rfft(x)*10**(db/20),n=len(x)).astype(np.float32)
+    y*=rms/max(1e-7,float(np.sqrt(np.mean(y*y))))
+    drive=bool(allow_drive and rng.random()<.35)
+    if drive:y=soft_drive(y,drive=float(rng.uniform(2,6)),target_rms=rms)
+    return y,dict(identity=False,low_db=float(low),high_db=float(high),bell_db=float(bell),bell_hz=center,drive=drive,zero_phase_eq=True)
+
+
 def soft_drive(audio,drive=6.,target_rms=.1):
     """Memoryless saturation: harmonics change, sample positions do not move."""
     audio=np.asarray(audio,dtype=np.float32)

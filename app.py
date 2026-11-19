@@ -23,6 +23,10 @@ with st.expander('詳細設定',expanded=False):
     force=st.checkbox('MIDI内の全音符をこの楽器として扱う',value=False)
     grid=st.selectbox('1拍の分割数',[4,3],format_func=lambda x:'16分音符' if x==4 else '8分3連符')
     chords_enabled=st.checkbox('コード名も解析する（初回は事前準備が必要）',value=True)
+    chord_checkpoint=None
+    if (ROOT/'models/chord_head_review.pt').exists():
+        chord_method=st.selectbox('コード認識',['標準','追加学習した候補（比較用）'])
+        if chord_method.startswith('追加'):chord_checkpoint=ROOT/'models/chord_head_review.pt'
     manual=st.checkbox('テンポを手動指定する（一定テンポの場合）')
     bpm=st.number_input('手動BPM',min_value=30.,max_value=300.,value=120.)
     meter=st.selectbox('拍子',[4,3])
@@ -58,7 +62,7 @@ if upload and st.button('解析する',type='primary'):
             (out/'notes.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2))
             if chords_enabled and (run/'input.wav').exists():
                 from band2tab.harmony import recognize,annotate_score
-                ch=recognize(run/'input.wav',out/'chords.json',device='cuda' if device=='cuda' else 'cpu')
+                ch=recognize(run/'input.wav',out/'chords.json',device='cuda' if device=='cuda' else 'cpu',checkpoint=chord_checkpoint)
                 annotate_score(out/'score.musicxml',ch,json.loads((out/'notes.json').read_text()))
             st.session_state['run']=str(run);st.session_state['score']=json.loads((out/'notes.json').read_text())
         st.success('下書きを作成しました。原音と照合して確認してください。')
@@ -98,6 +102,12 @@ if 'score' in st.session_state:
         ch=json.loads((out/'chords.json').read_text())
         st.subheader('コード進行')
         st.dataframe(pd.DataFrame([{'開始':s['start'],'終了':s['end'],'コード':display(s.get('label',s.get('chord','N'))),'要確認':s.get('needs_review',True)} for s in ch['segments']]),use_container_width=True)
+        from chordchart.export import write_chart
+        chart_dir=out/'chord_chart';write_chart(ch,chart_dir,title='曲のコード譜')
+        chord_cols=st.columns(2)
+        chord_cols[0].download_button('コード譜を保存（印刷用HTML）',(chart_dir/'chord_chart.html').read_bytes(),file_name='chord_chart.html',mime='text/html')
+        chord_cols[1].download_button('コード進行を保存（CSV）',(chart_dir/'chords.csv').read_bytes(),file_name='chords.csv',mime='text/csv')
+        st.caption('HTMLをブラウザで開くと印刷・PDF保存できます。小節頭の確認前は秒で表示します。')
     cols=st.columns(4)
     for col,name in zip(cols,['score.musicxml','raw.mid','notes.json','tab.txt']):
         col.download_button(name,(out/name).read_bytes(),file_name=name)

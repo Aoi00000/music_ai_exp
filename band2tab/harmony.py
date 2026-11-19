@@ -4,9 +4,9 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 from .score import beat_position,NAMES
 
-def recognize(audio,out,device='cpu'):
+def recognize(audio,out,device='cpu',checkpoint=None):
     from chordchart.infer import infer
-    result=infer(audio,baseline=True,device=device)
+    result=infer(audio,checkpoint=checkpoint,baseline=checkpoint is None,device=device)
     out=Path(out);out.parent.mkdir(parents=True,exist_ok=True)
     out.write_text(json.dumps(result,ensure_ascii=False,indent=2))
     return result
