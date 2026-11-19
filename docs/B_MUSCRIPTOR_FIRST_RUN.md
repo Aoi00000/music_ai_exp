@@ -73,3 +73,38 @@ export TORCH_HOME="$PWD/models/torch"
 macOS arm64 / Python 3.12向けの依存解決（バイナリwheelのみ）とシェル構文を確認。
 LinuxではMac用セットアップがインストール前に停止することも確認。
 人工音源の長さ・音数・波形を確認。Mac上の実インストール・モデル取得・採譜は利用者の実行結果で確認する。
+
+## Macでの初回実行ログと次の検査（11/19）
+
+利用者のMacで環境準備・B用17件のテストが成功した。
+Hugging Faceの本人による認証後、small重みへのHEADアクセスが成功した。
+CPU / float32 / 拍検出なしで人工音源を採譜し、MIDIの読み込みまで実行できた。
+生成元54音に対し推定42音、楽器はすべてAcoustic Grand Pianoだった。
+この件数だけで一致数・取りこぼし数は決められない。人工波形のため実楽器の精度は示さない。
+
+pretty_midiの「non-zero tracks」の警告について、muscriptor 0.4.0の
+`tokenizer/notes.py` の `note_events_to_midi` は、MuseScore対応のため
+先頭トラックに加えて楽器トラックにもテンポ列を反復している。
+警告を一律に隠さず、実際のMIDIで同時刻・同内容か確認する。
+
+```bash
+cd /Users/haruya/Downloads/music_ai_exp_B
+.venv/bin/python scripts/b_inspect_muscriptor_midi.py \
+  results/b_mu_small_cLPv7o/raw.mid \
+  --reference results/b_audio_fixture_obvhwo_x/reference.json
+```
+
+検査は追加のモデル実行・ダウンロードを行わない。
+元MIDIのSHAとイベントを確認し、別の `inspection_.../normalized.mid` に
+先頭トラックと一致した重複メタ情報だけを除いたコピーを作る。
+音符、プログラム、制御情報、他イベントの絶対tickを保持する。
+先頭トラックと一致しない情報があれば推測せず停止する。
+
+生成元と推定の音符を、楽器を区別せず同じ音高・開始±50msで一対一照合する。
+終了時刻の差は別に記録する。これを楽器込み・音長込みの正解率や実曲の精度とは呼ばない。
+推定のピアノ42音をギター／ベースに付け替えたり、生成元の音符で埋めたりしない。
+このピアノのみのMIDIは、既存のギター／ベース抽出では対象音が0になるため、
+実際のギター・ベースの録音かAからの受け渡しを使って次の接続確認を行う。
+
+クラウドでは重複テンポの除去前後の音符時刻、矛盾時の停止、ピアノ判定と元ファイルの保持を
+3件の回帰テストで検査した。利用者のMIDIそのものの内容は、このコマンドの結果で確認する。
