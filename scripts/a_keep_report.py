@@ -34,7 +34,7 @@ def evidence():
     path=ROOT/'docs/measurements/keep_feedback_20261119.json';path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
     return path
 
-def pdf():
+def pdf(source=None,destination=None,report_date='2026-11-19',three_column_widths=None):
     from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer,PageBreak,Table,TableStyle,KeepTogether
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib import colors
@@ -52,14 +52,14 @@ def pdf():
     def p(s,style='body'):
         s=escape(s);s=re.sub(r'`([^`]+)`',r'<font color="#216b74">\1</font>',s)
         return Paragraph(s,styles[style])
-    story=[];pages=(ROOT/'docs/FEEDBACK_CYCLE_20261119.md').read_text().split('<!-- page -->')
+    story=[];pages=(ROOT/(source or 'docs/FEEDBACK_CYCLE_20261119.md')).read_text().split('<!-- page -->')
     width=A4[0]-84
     for ix,part in enumerate(pages):
         if ix:story.append(PageBreak())
         lines=part.strip().splitlines();i=0;code=False
         while i<len(lines):
             line=lines[i].strip();i+=1
-            if not line:continue
+            if not line or line.startswith('<!--'):continue
             if line.startswith('```'):code=not code;continue
             if code:story.append(p(line,'code'));continue
             if line.startswith('|'):
@@ -67,17 +67,18 @@ def pdf():
                 while i<len(lines) and lines[i].strip().startswith('|'):rows.append(lines[i].strip());i+=1
                 cells=[[c.strip() for c in r.strip('|').split('|')] for r in rows if not re.fullmatch(r'[| :\-]+',r)]
                 n=len(cells[0]);widths=([width*.29]+[width*.71/(n-1)]*(n-1)) if n>3 else ([width*.17,width*.43,width*.40] if n==3 else [width/n]*n)
+                if n==3 and three_column_widths:widths=[width*v for v in three_column_widths]
                 t=Table([[p(c,'cell') for c in row] for row in cells],colWidths=widths,repeatRows=1,hAlign='LEFT')
                 t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#dcebf0')),('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),7),('RIGHTPADDING',(0,0),(-1,-1),7),('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6),('LINEBELOW',(0,0),(-1,0),.8,colors.HexColor('#43808a')),('LINEBELOW',(0,1),(-1,-1),.3,colors.HexColor('#d5dfe4'))]))
                 story.extend([t,Spacer(1,13)]);continue
             if line.startswith('# '):story.append(p(line[2:],'title'))
             elif line.startswith('## '):story.append(p(line[3:],'head'))
             else:story.append(p(line))
-    dest=ROOT/'output/pdf/band2tab_feedback_plan_20261119.pdf'
+    dest=ROOT/(destination or 'output/pdf/band2tab_feedback_plan_20261119.pdf')
     def decoration(c,doc):
         c.setFillColor(colors.HexColor('#122b44'));c.rect(0,A4[1]-14,A4[0],14,fill=1,stroke=0)
-        c.setFont('JP',8);c.setFillColor(colors.HexColor('#607789'));c.drawString(42,26,'Band2Tab / Feedback & Plan / 2026-11-19');c.drawRightString(A4[0]-42,26,str(doc.page))
-    SimpleDocTemplate(str(dest),pagesize=A4,rightMargin=42,leftMargin=42,topMargin=39,bottomMargin=44,title='Band2Tab 追加学習の結果と11/25までの計画',author='Band2Tab 担当A').build(story,onFirstPage=decoration,onLaterPages=decoration)
+        c.setFont('JP',8);c.setFillColor(colors.HexColor('#607789'));c.drawString(42,26,'Band2Tab / Feedback & Plan / '+report_date);c.drawRightString(A4[0]-42,26,str(doc.page))
+    SimpleDocTemplate(str(dest),pagesize=A4,rightMargin=42,leftMargin=42,topMargin=39,bottomMargin=44,title='Band2Tab 追加学習の結果と計画 / '+report_date,author='Band2Tab 担当A').build(story,onFirstPage=decoration,onLaterPages=decoration)
     print(dest)
 if __name__=='__main__':
     a=argparse.ArgumentParser();a.add_argument('--pdf',action='store_true');args=a.parse_args()

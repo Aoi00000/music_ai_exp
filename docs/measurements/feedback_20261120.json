@@ -1,0 +1,1286 @@
+{
+  "date": "2026-11-20",
+  "nn_runs": 12,
+  "nn_updates": 9600,
+  "tree_fits": 6,
+  "tree_iterations_per_fit": 200,
+  "mu_lora_runs": 6,
+  "mu_lora_updates": 720,
+  "mu_gradient_accumulation": 2,
+  "no_new_reinforcement_learning": true,
+  "no_new_external_dataset_download": true,
+  "training_target_counts": {
+    "calibration:stem_band_clean": {
+      "records": 10,
+      "candidates": 1032,
+      "positive": 15,
+      "positive_sound": 15
+    },
+    "calibration:stem_band_noisy": {
+      "records": 10,
+      "candidates": 1133,
+      "positive": 28,
+      "positive_sound": 26
+    },
+    "train:stem_band_clean": {
+      "records": 37,
+      "candidates": 4236,
+      "positive": 91,
+      "positive_sound": 87
+    },
+    "train:stem_band_noisy": {
+      "records": 37,
+      "candidates": 4708,
+      "positive": 116,
+      "positive_sound": 108
+    },
+    "train:stem_aug_bass": {
+      "records": 46,
+      "candidates": 2000,
+      "positive": 14,
+      "positive_sound": 12
+    },
+    "calibration:slakh_candidate_new": {
+      "records": 4,
+      "candidates": 1585,
+      "positive": 23,
+      "positive_sound": 23
+    },
+    "train:slakh_candidate_new": {
+      "records": 12,
+      "candidates": 4485,
+      "positive": 99,
+      "positive_sound": 99
+    },
+    "train:guitarset": {
+      "records": 8,
+      "candidates": 919,
+      "positive": 18,
+      "positive_sound": 18
+    },
+    "train:guitar_techs_clean": {
+      "records": 32,
+      "candidates": 700,
+      "positive": 0,
+      "positive_sound": 0
+    }
+  },
+  "sampling": {
+    "base_ids": [
+      "stem_band_goat_item_1_amp3_1_clean",
+      "stem_band_goat_item_102_amp5_2_clean",
+      "stem_band_goat_item_102_amp5_2_noisy",
+      "stem_band_goat_item_105_amp3_2_clean",
+      "stem_band_goat_item_105_amp3_2_noisy",
+      "stem_band_goat_item_108_di_1_clean",
+      "stem_band_goat_item_108_di_1_noisy",
+      "stem_band_goat_item_109_amp2_0_clean",
+      "stem_band_goat_item_109_amp2_0_noisy",
+      "stem_band_goat_item_111_amp2_0_clean",
+      "stem_band_goat_item_111_amp2_0_noisy",
+      "stem_band_goat_item_113_amp3_1_clean",
+      "stem_band_goat_item_113_amp3_1_noisy",
+      "stem_band_goat_item_120_amp3_0_clean",
+      "stem_band_goat_item_120_amp3_0_noisy",
+      "stem_band_goat_item_126_di_2_clean",
+      "stem_band_goat_item_132_amp5_0_clean",
+      "stem_band_goat_item_132_amp5_0_noisy",
+      "stem_band_goat_item_135_amp1_2_clean",
+      "stem_band_goat_item_135_amp1_2_noisy",
+      "stem_band_goat_item_150_amp5_0_clean",
+      "stem_band_goat_item_150_amp5_0_noisy",
+      "stem_band_goat_item_155_di_2_clean",
+      "stem_band_goat_item_157_amp4_0_clean",
+      "stem_band_goat_item_157_amp4_0_noisy",
+      "stem_band_goat_item_158_amp3_0_clean",
+      "stem_band_goat_item_158_amp3_0_noisy",
+      "stem_band_goat_item_17_amp1_0_clean",
+      "stem_band_goat_item_17_amp1_0_noisy",
+      "stem_band_goat_item_30_di_1_clean",
+      "stem_band_goat_item_30_di_1_noisy",
+      "stem_band_goat_item_39_amp3_2_clean",
+      "stem_band_goat_item_39_amp3_2_noisy",
+      "stem_band_goat_item_44_amp3_0_clean",
+      "stem_band_goat_item_47_amp1_1_clean",
+      "stem_band_goat_item_47_amp1_1_noisy",
+      "stem_band_goat_item_5_amp1_2_noisy",
+      "stem_band_goat_item_51_amp3_2_clean",
+      "stem_band_goat_item_53_amp4_2_clean",
+      "stem_band_goat_item_53_amp4_2_noisy",
+      "stem_band_goat_item_54_amp4_0_clean",
+      "stem_band_goat_item_54_amp4_0_noisy",
+      "stem_band_goat_item_56_amp4_1_clean",
+      "stem_band_goat_item_56_amp4_1_noisy",
+      "stem_band_goat_item_59_amp2_0_clean",
+      "stem_band_goat_item_59_amp2_0_noisy",
+      "stem_band_goat_item_64_amp3_2_noisy",
+      "stem_band_goat_item_65_amp3_2_noisy",
+      "stem_band_goat_item_72_amp5_1_clean",
+      "stem_band_goat_item_72_amp5_1_noisy",
+      "stem_band_goat_item_74_amp4_2_clean",
+      "stem_band_goat_item_79_amp4_0_clean",
+      "stem_band_goat_item_79_amp4_0_noisy",
+      "stem_band_goat_item_86_amp4_0_clean",
+      "stem_band_goat_item_86_amp4_0_noisy",
+      "stem_band_goat_item_87_amp2_1_clean",
+      "stem_band_goat_item_87_amp2_1_noisy",
+      "stem_band_goat_item_91_amp2_2_noisy",
+      "stem_band_goat_item_94_amp3_2_clean",
+      "stem_band_goat_item_94_amp3_2_noisy"
+    ],
+    "extra_ids": [
+      "stem_band_goat_item_1_amp3_1_noisy",
+      "stem_band_goat_item_126_di_2_noisy",
+      "stem_band_goat_item_155_di_2_noisy",
+      "stem_band_goat_item_40_amp5_1_clean",
+      "stem_band_goat_item_40_amp5_1_noisy",
+      "stem_band_goat_item_44_amp3_0_noisy",
+      "stem_band_goat_item_5_amp1_2_clean",
+      "stem_band_goat_item_51_amp3_2_noisy",
+      "stem_band_goat_item_64_amp3_2_clean",
+      "stem_band_goat_item_65_amp3_2_clean",
+      "stem_band_goat_item_74_amp4_2_noisy",
+      "stem_band_goat_item_91_amp2_2_clean",
+      "stem_band_goat_item_97_amp4_0_clean",
+      "stem_band_goat_item_97_amp4_0_noisy",
+      "stem_aug_bass_aug_source_Track01075_S02_1_drive",
+      "stem_aug_bass_aug_source_Track01075_S02_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00271_S07_0_drive",
+      "stem_aug_bass_aug_source_Track00271_S07_1_damped_drive",
+      "stem_aug_bass_aug_source_Track00664_S04_1_drive",
+      "stem_aug_bass_aug_source_Track00664_S04_0_damped_drive",
+      "stem_aug_bass_aug_source_Track01386_S04_0_drive",
+      "stem_aug_bass_aug_source_Track00138_S03_0_drive",
+      "stem_aug_bass_aug_source_Track00138_S03_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00973_S04_0_drive",
+      "stem_aug_bass_aug_source_Track00973_S04_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00144_S00_0_drive",
+      "stem_aug_bass_aug_source_Track01232_S01_1_drive",
+      "stem_aug_bass_aug_source_Track01232_S01_1_damped_drive",
+      "stem_aug_bass_aug_source_Track00674_S01_1_drive",
+      "stem_aug_bass_aug_source_Track00674_S01_1_damped_drive",
+      "stem_aug_bass_aug_source_Track01397_S00_1_drive",
+      "stem_aug_bass_aug_source_Track01397_S00_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00205_S06_0_drive",
+      "stem_aug_bass_aug_source_Track00205_S06_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00955_S08_0_drive",
+      "stem_aug_bass_aug_source_Track00955_S08_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00247_S05_1_drive",
+      "stem_aug_bass_aug_source_Track00247_S05_1_damped_drive",
+      "stem_aug_bass_aug_source_Track00162_S01_0_drive",
+      "stem_aug_bass_aug_source_Track00162_S01_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00434_S07_0_drive",
+      "stem_aug_bass_aug_source_Track00591_S00_0_drive",
+      "stem_aug_bass_aug_source_Track00591_S00_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00203_S00_1_drive",
+      "stem_aug_bass_aug_source_Track01069_S00_0_drive",
+      "stem_aug_bass_aug_source_Track01069_S00_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00530_S04_0_drive",
+      "stem_aug_bass_aug_source_Track00565_S03_1_drive",
+      "stem_aug_bass_aug_source_Track00561_S15_0_drive",
+      "stem_aug_bass_aug_source_Track00085_S02_0_drive",
+      "stem_aug_bass_aug_source_Track00085_S02_1_damped_drive",
+      "stem_aug_bass_aug_source_Track01477_S07_1_drive",
+      "stem_aug_bass_aug_source_Track01477_S07_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00515_S02_1_drive",
+      "stem_aug_bass_aug_source_Track00515_S02_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00912_S07_0_drive",
+      "stem_aug_bass_aug_source_Track00912_S07_0_damped_drive",
+      "stem_aug_bass_aug_source_Track00920_S02_1_drive",
+      "stem_aug_bass_aug_source_Track00920_S02_0_damped_drive",
+      "c2_Track00674_1",
+      "c2_Track00565_1",
+      "c2_Track00920_1",
+      "c2_Track00203_1",
+      "c2_Track00271_1",
+      "c2_Track00973_1",
+      "c2_Track00955_1",
+      "c2_Track00205_1",
+      "c2_Track00591_1",
+      "c2_Track01069_1",
+      "c2_Track00144_1",
+      "c2_Track00247_1",
+      "ref_guitarset_02_SS2-88-F_solo",
+      "duration_guitarset_00_SS2-88-F_solo",
+      "ref_guitarset_00_Funk3-98-A_comp",
+      "duration_guitarset_02_SS2-88-F_comp",
+      "duration_guitarset_00_SS2-107-Ab_solo",
+      "duration_guitarset_05_SS2-88-F_comp",
+      "ref_guitarset_04_Jazz3-137-Eb_comp",
+      "duration_guitarset_04_SS2-107-Ab_comp",
+      "clean_duration_P2_chords_directinput_Drop3_7",
+      "clean_duration_P2_chords_directinput_Set1_dim",
+      "clean_duration_P2_chords_directinput_Set1_maj",
+      "clean_duration_P2_chords_directinput_Set1_min",
+      "clean_duration_P2_chords_directinput_Set2_Maj7",
+      "clean_duration_P2_chords_directinput_Set2_dim",
+      "clean_duration_P2_chords_directinput_Set2_m7",
+      "clean_duration_P2_chords_directinput_Set2_m7b5",
+      "clean_duration_P2_chords_directinput_Set2_min",
+      "clean_duration_P2_chords_directinput_Set3_dim",
+      "clean_duration_P2_chords_directinput_Set3_maj",
+      "clean_duration_P2_chords_directinput_Set3_min",
+      "clean_duration_P2_scales_directinput_A",
+      "clean_duration_P2_scales_directinput_Ab",
+      "clean_duration_P2_scales_directinput_B",
+      "clean_duration_P2_scales_directinput_Bb",
+      "clean_duration_P2_scales_directinput_C",
+      "clean_duration_P2_scales_directinput_D",
+      "clean_duration_P2_scales_directinput_Db",
+      "clean_duration_P2_scales_directinput_E",
+      "clean_duration_P2_scales_directinput_Eb",
+      "clean_duration_P2_scales_directinput_F",
+      "clean_duration_P2_scales_directinput_G",
+      "clean_duration_P2_scales_directinput_Gb"
+    ],
+    "base_records": 60,
+    "extra_records": 103
+  },
+  "nn_calibration_baseline": {
+    "note_f1": 0.5496186575461389,
+    "frame_f1": 0.6219558076269477,
+    "union_frame_f1": 0.6573009049702851,
+    "active_exact_match": 0.24776559117247365,
+    "offset_f1": 0.40200350384728245,
+    "datasets": {
+      "stem_band_clean": {
+        "note_f1": 0.6870062979501094,
+        "frame_f1": 0.7292986219274555,
+        "union_frame_f1": 0.7397888042137792,
+        "active_exact_match": 0.3316923076923077,
+        "offset_f1": 0.568346463326452
+      },
+      "stem_band_noisy": {
+        "note_f1": 0.5970507476748339,
+        "frame_f1": 0.6640724496739863,
+        "union_frame_f1": 0.6747675448854986,
+        "active_exact_match": 0.2847768281101614,
+        "offset_f1": 0.4726666095219554
+      },
+      "slakh_candidate_new": {
+        "note_f1": 0.3647989270134736,
+        "frame_f1": 0.47249635127940104,
+        "union_frame_f1": 0.5573463658115777,
+        "active_exact_match": 0.1268276377149519,
+        "offset_f1": 0.16499743869344013
+      }
+    },
+    "score": 0.5644382002850112
+  },
+  "tree_calibration_baseline": {
+    "note_f1": 0.5496186575461389,
+    "frame_f1": 0.6219558076269477,
+    "union_frame_f1": 0.6573009049702851,
+    "active_exact_match": 0.24776559117247365,
+    "offset_f1": 0.40200350384728245,
+    "datasets": {
+      "stem_band_clean": {
+        "note_f1": 0.6870062979501094,
+        "frame_f1": 0.7292986219274555,
+        "union_frame_f1": 0.7397888042137792,
+        "active_exact_match": 0.3316923076923077,
+        "offset_f1": 0.568346463326452
+      },
+      "stem_band_noisy": {
+        "note_f1": 0.5970507476748339,
+        "frame_f1": 0.6640724496739863,
+        "union_frame_f1": 0.6747675448854986,
+        "active_exact_match": 0.2847768281101614,
+        "offset_f1": 0.4726666095219554
+      },
+      "slakh_candidate_new": {
+        "note_f1": 0.3647989270134736,
+        "frame_f1": 0.47249635127940104,
+        "union_frame_f1": 0.5573463658115777,
+        "active_exact_match": 0.1268276377149519,
+        "offset_f1": 0.16499743869344013
+      }
+    },
+    "score": 0.5644382002850112
+  },
+  "low_score_calibration": {
+    "identity_selected": true,
+    "winner": null,
+    "settings_compared": 486
+  },
+  "nn_final_policies": [
+    {
+      "arm": "your_only",
+      "thresholds": [
+        1.1,
+        1.1
+      ],
+      "strict_gain": false
+    },
+    {
+      "arm": "octave_onset",
+      "thresholds": [
+        1.1,
+        1.1
+      ],
+      "strict_gain": false
+    },
+    {
+      "arm": "octave_sound",
+      "thresholds": [
+        1.1,
+        1.1
+      ],
+      "strict_gain": false
+    },
+    {
+      "arm": "octave_diverse",
+      "thresholds": [
+        1.1,
+        1.1
+      ],
+      "strict_gain": false
+    }
+  ],
+  "tree_final_policies": [
+    {
+      "arm": "original",
+      "thresholds": [
+        1.1,
+        1.1
+      ],
+      "strict_gain": false
+    },
+    {
+      "arm": "diverse",
+      "thresholds": [
+        1.1,
+        1.1
+      ],
+      "strict_gain": false
+    }
+  ],
+  "tree_seeds_caveat": "With this small dataset and these deterministic settings, three seeds may yield identical trees; not three independent stochastic replications.",
+  "candidate_diagnostic": {
+    "summary": {
+      "development": {
+        "baseline": {
+          "note_f1": 0.8184206914218607,
+          "frame_f1": 0.8068840568509655,
+          "union_frame_f1": 0.820788275665637,
+          "active_exact_match": 0.4207692307692308,
+          "offset_f1": 0.735379569323973,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8318435281215097,
+              "union_frame_f1": 0.8499003812955117,
+              "active_exact_match": 0.42807692307692313,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7852094462406947,
+              "frame_f1": 0.7819245855804213,
+              "union_frame_f1": 0.7916761700357622,
+              "active_exact_match": 0.41346153846153844,
+              "offset_f1": 0.6862938810658037
+            }
+          },
+          "score": 0.776363282774818
+        },
+        "unfiltered_union": {
+          "note_f1": 0.640597926332884,
+          "frame_f1": 0.6341724231619241,
+          "union_frame_f1": 0.6514809089695579,
+          "active_exact_match": 0.21596153846153845,
+          "offset_f1": 0.5711444962332652,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.6594231450322655,
+              "frame_f1": 0.6469106039033511,
+              "union_frame_f1": 0.667272087792219,
+              "active_exact_match": 0.21269230769230768,
+              "offset_f1": 0.6026799908985823
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.6217727076335027,
+              "frame_f1": 0.621434242420497,
+              "union_frame_f1": 0.6356897301468967,
+              "active_exact_match": 0.21923076923076923,
+              "offset_f1": 0.5396090015679481
+            }
+          },
+          "score": 0.599248657412178
+        },
+        "candidate_oracle_diagnostic": {
+          "note_f1": 0.837085284019037,
+          "frame_f1": 0.818787008379851,
+          "union_frame_f1": 0.8332241872553185,
+          "active_exact_match": 0.4294230769230769,
+          "offset_f1": 0.7412383772996607,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8733043441863543,
+              "frame_f1": 0.8452365653841332,
+              "union_frame_f1": 0.8637511009579466,
+              "active_exact_match": 0.4453846153846154,
+              "offset_f1": 0.7923363348250768
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.8008662238517199,
+              "frame_f1": 0.7923374513755688,
+              "union_frame_f1": 0.8026972735526904,
+              "active_exact_match": 0.4134615384615385,
+              "offset_f1": 0.6901404197742445
+            }
+          },
+          "score": 0.7907792202087149
+        },
+        "chosen_plus_c7": {
+          "note_f1": 0.8221418936613857,
+          "frame_f1": 0.8107845639887636,
+          "union_frame_f1": 0.8247527395783859,
+          "active_exact_match": 0.4398076923076923,
+          "offset_f1": 0.7392380276260758,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.855262373829058,
+              "frame_f1": 0.835633294534228,
+              "union_frame_f1": 0.8537170547772235,
+              "active_exact_match": 0.44846153846153847,
+              "offset_f1": 0.7879608178833675
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7890214134937134,
+              "frame_f1": 0.7859358334432992,
+              "union_frame_f1": 0.7957884243795483,
+              "active_exact_match": 0.4311538461538461,
+              "offset_f1": 0.6905152373687842
+            }
+          },
+          "score": 0.7817218525871109
+        }
+      },
+      "known_regression": {
+        "baseline": {
+          "note_f1": 0.6706095890900889,
+          "frame_f1": 0.7299473655269795,
+          "union_frame_f1": 0.7335472228476491,
+          "active_exact_match": 0.3263736263736263,
+          "offset_f1": 0.5780365815434625,
+          "datasets": {
+            "held_band_clean": {
+              "note_f1": 0.6974742381340263,
+              "frame_f1": 0.758957990442543,
+              "union_frame_f1": 0.7615030834301731,
+              "active_exact_match": 0.3665934065934065,
+              "offset_f1": 0.6123518758674039
+            },
+            "held_band_noisy": {
+              "note_f1": 0.6437449400461516,
+              "frame_f1": 0.700936740611416,
+              "union_frame_f1": 0.705591362265125,
+              "active_exact_match": 0.2861538461538462,
+              "offset_f1": 0.5437212872195211
+            }
+          },
+          "score": 0.6667548453670553
+        },
+        "unfiltered_union": {
+          "note_f1": 0.5023303293903881,
+          "frame_f1": 0.5384031454376139,
+          "union_frame_f1": 0.5572339232126633,
+          "active_exact_match": 0.07384615384615384,
+          "offset_f1": 0.4258803585072627,
+          "datasets": {
+            "held_band_clean": {
+              "note_f1": 0.5229667562177251,
+              "frame_f1": 0.5578666114653339,
+              "union_frame_f1": 0.5833769202891734,
+              "active_exact_match": 0.08879120879120879,
+              "offset_f1": 0.45261214735468014
+            },
+            "held_band_noisy": {
+              "note_f1": 0.48169390256305106,
+              "frame_f1": 0.518939679409894,
+              "union_frame_f1": 0.5310909261361533,
+              "active_exact_match": 0.058901098901098896,
+              "offset_f1": 0.39914856965984524
+            }
+          },
+          "score": 0.48222601430333994
+        },
+        "candidate_oracle_diagnostic": {
+          "note_f1": 0.7044359845708643,
+          "frame_f1": 0.7553926418175958,
+          "union_frame_f1": 0.7587415037591991,
+          "active_exact_match": 0.361098901098901,
+          "offset_f1": 0.5971733176011118,
+          "datasets": {
+            "held_band_clean": {
+              "note_f1": 0.7317715780986064,
+              "frame_f1": 0.7946525354129091,
+              "union_frame_f1": 0.7965351017176482,
+              "active_exact_match": 0.43296703296703287,
+              "offset_f1": 0.6378266622336162
+            },
+            "held_band_noisy": {
+              "note_f1": 0.6771003910431224,
+              "frame_f1": 0.7161327482222823,
+              "union_frame_f1": 0.72094790580075,
+              "active_exact_match": 0.2892307692307692,
+              "offset_f1": 0.5565199729686073
+            }
+          },
+          "score": 0.6964178203324346
+        },
+        "chosen_plus_c7": {
+          "note_f1": 0.6713230785068336,
+          "frame_f1": 0.730512325464813,
+          "union_frame_f1": 0.7338351789883576,
+          "active_exact_match": 0.3263736263736263,
+          "offset_f1": 0.5786631657879264,
+          "datasets": {
+            "held_band_clean": {
+              "note_f1": 0.6978645581964775,
+              "frame_f1": 0.7593492571641899,
+              "union_frame_f1": 0.7615030834301731,
+              "active_exact_match": 0.3665934065934065,
+              "offset_f1": 0.6127248257273309
+            },
+            "held_band_noisy": {
+              "note_f1": 0.6447815988171895,
+              "frame_f1": 0.7016753937654362,
+              "union_frame_f1": 0.706167274546542,
+              "active_exact_match": 0.2861538461538462,
+              "offset_f1": 0.5446015058485221
+            }
+          },
+          "score": 0.6672534701533887
+        }
+      }
+    },
+    "coverage": {
+      "development": {
+        "candidates": 1607,
+        "strict_missing_matches": 35,
+        "positive_and_frame_nonnegative": 32
+      },
+      "known_regression": {
+        "candidates": 1399,
+        "strict_missing_matches": 43,
+        "positive_and_frame_nonnegative": 42
+      }
+    }
+  },
+  "mu": {
+    "mu_adapt_v1": {
+      "selected_on_internal": "baseline",
+      "internal_baseline": {
+        "note_f1": 0.527367293449505,
+        "frame_f1": 0.5570382645932964,
+        "union_frame_f1": 0.6008489597316609,
+        "active_exact_match": 0.09230769230769231,
+        "offset_f1": 0.4054610041912254,
+        "datasets": {
+          "stem_band_clean": {
+            "note_f1": 0.643786597267404,
+            "frame_f1": 0.6587461924344988,
+            "union_frame_f1": 0.6840788710612797,
+            "active_exact_match": 0.05384615384615385,
+            "offset_f1": 0.5533000949667617
+          },
+          "stem_band_noisy": {
+            "note_f1": 0.6130140782618335,
+            "frame_f1": 0.6747931252655016,
+            "union_frame_f1": 0.6747931252655016,
+            "active_exact_match": 0.2230769230769231,
+            "offset_f1": 0.5451967387451259
+          },
+          "slakh_candidate_new": {
+            "note_f1": 0.3253012048192771,
+            "frame_f1": 0.3375754760798885,
+            "union_frame_f1": 0.4436748828682013,
+            "active_exact_match": 0.0,
+            "offset_f1": 0.11788617886178862
+          }
+        },
+        "score": 0.5096494926918106
+      },
+      "internal_choices": [
+        {
+          "arm": "gold",
+          "eligible": false,
+          "score": 0.4356425065540899,
+          "summary": {
+            "note_f1": 0.5041837208006132,
+            "frame_f1": 0.5502970256408161,
+            "union_frame_f1": 0.591436621976773,
+            "active_exact_match": 0.09230769230769231,
+            "offset_f1": 0.38471383021824496,
+            "datasets": {
+              "stem_band_clean": {
+                "note_f1": 0.6343526350032531,
+                "frame_f1": 0.6482507916264721,
+                "union_frame_f1": 0.6723289235747596,
+                "active_exact_match": 0.05384615384615385,
+                "offset_f1": 0.5340693257359924
+              },
+              "stem_band_noisy": {
+                "note_f1": 0.5408491298082252,
+                "frame_f1": 0.673468889155227,
+                "union_frame_f1": 0.673468889155227,
+                "active_exact_match": 0.2230769230769231,
+                "offset_f1": 0.5021859860569539
+              },
+              "slakh_candidate_new": {
+                "note_f1": 0.3373493975903614,
+                "frame_f1": 0.32917139614074914,
+                "union_frame_f1": 0.4285120532003325,
+                "active_exact_match": 0.0,
+                "offset_f1": 0.11788617886178862
+              }
+            },
+            "score": 0.4963376694554118
+          }
+        },
+        {
+          "arm": "gold_tone",
+          "eligible": false,
+          "score": 0.4356425065540899,
+          "summary": {
+            "note_f1": 0.5041837208006132,
+            "frame_f1": 0.5502970256408161,
+            "union_frame_f1": 0.591436621976773,
+            "active_exact_match": 0.09230769230769231,
+            "offset_f1": 0.38471383021824496,
+            "datasets": {
+              "stem_band_clean": {
+                "note_f1": 0.6343526350032531,
+                "frame_f1": 0.6482507916264721,
+                "union_frame_f1": 0.6723289235747596,
+                "active_exact_match": 0.05384615384615385,
+                "offset_f1": 0.5340693257359924
+              },
+              "stem_band_noisy": {
+                "note_f1": 0.5408491298082252,
+                "frame_f1": 0.673468889155227,
+                "union_frame_f1": 0.673468889155227,
+                "active_exact_match": 0.2230769230769231,
+                "offset_f1": 0.5021859860569539
+              },
+              "slakh_candidate_new": {
+                "note_f1": 0.3373493975903614,
+                "frame_f1": 0.32917139614074914,
+                "union_frame_f1": 0.4285120532003325,
+                "active_exact_match": 0.0,
+                "offset_f1": 0.11788617886178862
+              }
+            },
+            "score": 0.4963376694554118
+          }
+        }
+      ],
+      "reused16": {
+        "baseline": {
+          "note_f1": 0.8184206914218607,
+          "frame_f1": 0.8067860176352792,
+          "union_frame_f1": 0.8206902364499506,
+          "active_exact_match": 0.42057692307692307,
+          "offset_f1": 0.735379569323973,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8316474496901372,
+              "union_frame_f1": 0.8497043028641391,
+              "active_exact_match": 0.4276923076923077,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7852094462406947,
+              "frame_f1": 0.7819245855804213,
+              "union_frame_f1": 0.7916761700357622,
+              "active_exact_match": 0.41346153846153844,
+              "offset_f1": 0.6862938810658037
+            }
+          },
+          "score": 0.7762950323977441
+        },
+        "gold": {
+          "note_f1": 0.8176866985003678,
+          "frame_f1": 0.8081763402689701,
+          "union_frame_f1": 0.8214369385690743,
+          "active_exact_match": 0.42038461538461536,
+          "offset_f1": 0.7345751935195972,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8309160023120968,
+              "union_frame_f1": 0.84896747732173,
+              "active_exact_match": 0.42653846153846153,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7837414603977089,
+              "frame_f1": 0.7854366782258433,
+              "union_frame_f1": 0.7939063998164188,
+              "active_exact_match": 0.41423076923076924,
+              "offset_f1": 0.6846851294570521
+            }
+          },
+          "score": 0.7765164606481197
+        },
+        "gold_tone": {
+          "note_f1": 0.8176866985003678,
+          "frame_f1": 0.8081382634766046,
+          "union_frame_f1": 0.8213981500984235,
+          "active_exact_match": 0.42038461538461536,
+          "offset_f1": 0.7345751935195972,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8308398487273658,
+              "union_frame_f1": 0.8488899003804283,
+              "active_exact_match": 0.42653846153846153,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7837414603977089,
+              "frame_f1": 0.7854366782258433,
+              "union_frame_f1": 0.7939063998164188,
+              "active_exact_match": 0.41423076923076924,
+              "offset_f1": 0.6846851294570521
+            }
+          },
+          "score": 0.7764972443323658
+        }
+      }
+    },
+    "mu_native_v2": {
+      "selected_on_internal": "baseline",
+      "internal_baseline": {
+        "note_f1": 0.527367293449505,
+        "frame_f1": 0.5570382645932964,
+        "union_frame_f1": 0.6008489597316609,
+        "active_exact_match": 0.09230769230769231,
+        "offset_f1": 0.4054610041912254,
+        "datasets": {
+          "stem_band_clean": {
+            "note_f1": 0.643786597267404,
+            "frame_f1": 0.6587461924344988,
+            "union_frame_f1": 0.6840788710612797,
+            "active_exact_match": 0.05384615384615385,
+            "offset_f1": 0.5533000949667617
+          },
+          "stem_band_noisy": {
+            "note_f1": 0.6130140782618335,
+            "frame_f1": 0.6747931252655016,
+            "union_frame_f1": 0.6747931252655016,
+            "active_exact_match": 0.2230769230769231,
+            "offset_f1": 0.5451967387451259
+          },
+          "slakh_candidate_new": {
+            "note_f1": 0.3253012048192771,
+            "frame_f1": 0.3375754760798885,
+            "union_frame_f1": 0.4436748828682013,
+            "active_exact_match": 0.0,
+            "offset_f1": 0.11788617886178862
+          }
+        },
+        "score": 0.5096494926918106
+      },
+      "internal_choices": [
+        {
+          "arm": "gold",
+          "eligible": false,
+          "score": 0.43220608043725145,
+          "summary": {
+            "note_f1": 0.4973108685669363,
+            "frame_f1": 0.5502970256408161,
+            "union_frame_f1": 0.591436621976773,
+            "active_exact_match": 0.09230769230769231,
+            "offset_f1": 0.38471383021824496,
+            "datasets": {
+              "stem_band_clean": {
+                "note_f1": 0.6343526350032531,
+                "frame_f1": 0.6482507916264721,
+                "union_frame_f1": 0.6723289235747596,
+                "active_exact_match": 0.05384615384615385,
+                "offset_f1": 0.5340693257359924
+              },
+              "stem_band_noisy": {
+                "note_f1": 0.5202305731071943,
+                "frame_f1": 0.673468889155227,
+                "union_frame_f1": 0.673468889155227,
+                "active_exact_match": 0.2230769230769231,
+                "offset_f1": 0.5021859860569539
+              },
+              "slakh_candidate_new": {
+                "note_f1": 0.3373493975903614,
+                "frame_f1": 0.32917139614074914,
+                "union_frame_f1": 0.4285120532003325,
+                "active_exact_match": 0.0,
+                "offset_f1": 0.11788617886178862
+              }
+            },
+            "score": 0.493588528561941
+          }
+        },
+        {
+          "arm": "gold_tone",
+          "eligible": false,
+          "score": 0.43220608043725145,
+          "summary": {
+            "note_f1": 0.4973108685669363,
+            "frame_f1": 0.5502970256408161,
+            "union_frame_f1": 0.591436621976773,
+            "active_exact_match": 0.09230769230769231,
+            "offset_f1": 0.38471383021824496,
+            "datasets": {
+              "stem_band_clean": {
+                "note_f1": 0.6343526350032531,
+                "frame_f1": 0.6482507916264721,
+                "union_frame_f1": 0.6723289235747596,
+                "active_exact_match": 0.05384615384615385,
+                "offset_f1": 0.5340693257359924
+              },
+              "stem_band_noisy": {
+                "note_f1": 0.5202305731071943,
+                "frame_f1": 0.673468889155227,
+                "union_frame_f1": 0.673468889155227,
+                "active_exact_match": 0.2230769230769231,
+                "offset_f1": 0.5021859860569539
+              },
+              "slakh_candidate_new": {
+                "note_f1": 0.3373493975903614,
+                "frame_f1": 0.32917139614074914,
+                "union_frame_f1": 0.4285120532003325,
+                "active_exact_match": 0.0,
+                "offset_f1": 0.11788617886178862
+              }
+            },
+            "score": 0.493588528561941
+          }
+        }
+      ],
+      "reused16": {
+        "baseline": {
+          "note_f1": 0.8184206914218607,
+          "frame_f1": 0.8067860176352792,
+          "union_frame_f1": 0.8206902364499506,
+          "active_exact_match": 0.42057692307692307,
+          "offset_f1": 0.735379569323973,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8316474496901372,
+              "union_frame_f1": 0.8497043028641391,
+              "active_exact_match": 0.4276923076923077,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7852094462406947,
+              "frame_f1": 0.7819245855804213,
+              "union_frame_f1": 0.7916761700357622,
+              "active_exact_match": 0.41346153846153844,
+              "offset_f1": 0.6862938810658037
+            }
+          },
+          "score": 0.7762950323977441
+        },
+        "gold": {
+          "note_f1": 0.8176866985003678,
+          "frame_f1": 0.8081382634766046,
+          "union_frame_f1": 0.8213981500984235,
+          "active_exact_match": 0.42038461538461536,
+          "offset_f1": 0.7345751935195972,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8308398487273658,
+              "union_frame_f1": 0.8488899003804283,
+              "active_exact_match": 0.42653846153846153,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7837414603977089,
+              "frame_f1": 0.7854366782258433,
+              "union_frame_f1": 0.7939063998164188,
+              "active_exact_match": 0.41423076923076924,
+              "offset_f1": 0.6846851294570521
+            }
+          },
+          "score": 0.7764972443323658
+        },
+        "gold_tone": {
+          "note_f1": 0.8176866985003678,
+          "frame_f1": 0.8081382634766046,
+          "union_frame_f1": 0.8213981500984235,
+          "active_exact_match": 0.42038461538461536,
+          "offset_f1": 0.7345751935195972,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8308398487273658,
+              "union_frame_f1": 0.8488899003804283,
+              "active_exact_match": 0.42653846153846153,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7837414603977089,
+              "frame_f1": 0.7854366782258433,
+              "union_frame_f1": 0.7939063998164188,
+              "active_exact_match": 0.41423076923076924,
+              "offset_f1": 0.6846851294570521
+            }
+          },
+          "score": 0.7764972443323658
+        }
+      }
+    },
+    "mu_canonical_v3": {
+      "selected_on_internal": "baseline",
+      "internal_baseline": {
+        "note_f1": 0.527367293449505,
+        "frame_f1": 0.5570382645932964,
+        "union_frame_f1": 0.6008489597316609,
+        "active_exact_match": 0.09230769230769231,
+        "offset_f1": 0.4054610041912254,
+        "datasets": {
+          "stem_band_clean": {
+            "note_f1": 0.643786597267404,
+            "frame_f1": 0.6587461924344988,
+            "union_frame_f1": 0.6840788710612797,
+            "active_exact_match": 0.05384615384615385,
+            "offset_f1": 0.5533000949667617
+          },
+          "stem_band_noisy": {
+            "note_f1": 0.6130140782618335,
+            "frame_f1": 0.6747931252655016,
+            "union_frame_f1": 0.6747931252655016,
+            "active_exact_match": 0.2230769230769231,
+            "offset_f1": 0.5451967387451259
+          },
+          "slakh_candidate_new": {
+            "note_f1": 0.3253012048192771,
+            "frame_f1": 0.3375754760798885,
+            "union_frame_f1": 0.4436748828682013,
+            "active_exact_match": 0.0,
+            "offset_f1": 0.11788617886178862
+          }
+        },
+        "score": 0.5096494926918106
+      },
+      "internal_choices": [
+        {
+          "arm": "gold",
+          "eligible": false,
+          "score": 0.43220608043725145,
+          "summary": {
+            "note_f1": 0.4973108685669363,
+            "frame_f1": 0.5502970256408161,
+            "union_frame_f1": 0.591436621976773,
+            "active_exact_match": 0.09230769230769231,
+            "offset_f1": 0.38471383021824496,
+            "datasets": {
+              "stem_band_clean": {
+                "note_f1": 0.6343526350032531,
+                "frame_f1": 0.6482507916264721,
+                "union_frame_f1": 0.6723289235747596,
+                "active_exact_match": 0.05384615384615385,
+                "offset_f1": 0.5340693257359924
+              },
+              "stem_band_noisy": {
+                "note_f1": 0.5202305731071943,
+                "frame_f1": 0.673468889155227,
+                "union_frame_f1": 0.673468889155227,
+                "active_exact_match": 0.2230769230769231,
+                "offset_f1": 0.5021859860569539
+              },
+              "slakh_candidate_new": {
+                "note_f1": 0.3373493975903614,
+                "frame_f1": 0.32917139614074914,
+                "union_frame_f1": 0.4285120532003325,
+                "active_exact_match": 0.0,
+                "offset_f1": 0.11788617886178862
+              }
+            },
+            "score": 0.493588528561941
+          }
+        },
+        {
+          "arm": "gold_tone",
+          "eligible": false,
+          "score": 0.4356425065540899,
+          "summary": {
+            "note_f1": 0.5041837208006132,
+            "frame_f1": 0.5502970256408161,
+            "union_frame_f1": 0.591436621976773,
+            "active_exact_match": 0.09230769230769231,
+            "offset_f1": 0.38471383021824496,
+            "datasets": {
+              "stem_band_clean": {
+                "note_f1": 0.6343526350032531,
+                "frame_f1": 0.6482507916264721,
+                "union_frame_f1": 0.6723289235747596,
+                "active_exact_match": 0.05384615384615385,
+                "offset_f1": 0.5340693257359924
+              },
+              "stem_band_noisy": {
+                "note_f1": 0.5408491298082252,
+                "frame_f1": 0.673468889155227,
+                "union_frame_f1": 0.673468889155227,
+                "active_exact_match": 0.2230769230769231,
+                "offset_f1": 0.5021859860569539
+              },
+              "slakh_candidate_new": {
+                "note_f1": 0.3373493975903614,
+                "frame_f1": 0.32917139614074914,
+                "union_frame_f1": 0.4285120532003325,
+                "active_exact_match": 0.0,
+                "offset_f1": 0.11788617886178862
+              }
+            },
+            "score": 0.4963376694554118
+          }
+        }
+      ],
+      "reused16": {
+        "baseline": {
+          "note_f1": 0.8184206914218607,
+          "frame_f1": 0.8067860176352792,
+          "union_frame_f1": 0.8206902364499506,
+          "active_exact_match": 0.42057692307692307,
+          "offset_f1": 0.735379569323973,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8316474496901372,
+              "union_frame_f1": 0.8497043028641391,
+              "active_exact_match": 0.4276923076923077,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7852094462406947,
+              "frame_f1": 0.7819245855804213,
+              "union_frame_f1": 0.7916761700357622,
+              "active_exact_match": 0.41346153846153844,
+              "offset_f1": 0.6862938810658037
+            }
+          },
+          "score": 0.7762950323977441
+        },
+        "gold": {
+          "note_f1": 0.8176866985003678,
+          "frame_f1": 0.8081763402689701,
+          "union_frame_f1": 0.8214369385690743,
+          "active_exact_match": 0.42038461538461536,
+          "offset_f1": 0.7345751935195972,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8309160023120968,
+              "union_frame_f1": 0.84896747732173,
+              "active_exact_match": 0.42653846153846153,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7837414603977089,
+              "frame_f1": 0.7854366782258433,
+              "union_frame_f1": 0.7939063998164188,
+              "active_exact_match": 0.41423076923076924,
+              "offset_f1": 0.6846851294570521
+            }
+          },
+          "score": 0.7765164606481197
+        },
+        "gold_tone": {
+          "note_f1": 0.8176866985003678,
+          "frame_f1": 0.8081382634766046,
+          "union_frame_f1": 0.8213981500984235,
+          "active_exact_match": 0.42038461538461536,
+          "offset_f1": 0.7345751935195972,
+          "datasets": {
+            "band_stress_clean": {
+              "note_f1": 0.8516319366030267,
+              "frame_f1": 0.8308398487273658,
+              "union_frame_f1": 0.8488899003804283,
+              "active_exact_match": 0.42653846153846153,
+              "offset_f1": 0.7844652575821423
+            },
+            "band_stress_noisy": {
+              "note_f1": 0.7837414603977089,
+              "frame_f1": 0.7854366782258433,
+              "union_frame_f1": 0.7939063998164188,
+              "active_exact_match": 0.41423076923076924,
+              "offset_f1": 0.6846851294570521
+            }
+          },
+          "score": 0.7764972443323658
+        }
+      }
+    }
+  },
+  "training_integrity": {
+    "mu_adapt_v1/gold": {
+      "successful_updates": 120,
+      "steps": 120,
+      "frozen_base_unchanged": true,
+      "draw_sha256": "c5cacfb3dc5f6902bfce3cb91e33951e58667f921bcef2162e02020c9ae1ed80",
+      "seconds": 19.005401125999995,
+      "checkpoint_sha256": "cdcc76e1bc3c61432cf71d93d33a8aca4c8e0b232a428b241804e460881719aa"
+    },
+    "mu_adapt_v1/gold_tone": {
+      "successful_updates": 120,
+      "steps": 120,
+      "frozen_base_unchanged": true,
+      "draw_sha256": "c5cacfb3dc5f6902bfce3cb91e33951e58667f921bcef2162e02020c9ae1ed80",
+      "seconds": 17.68817151399999,
+      "checkpoint_sha256": "6d3586cdca0de7ca1c67ad916857bf87c0792bc0f9d15469dc313430b0ddb2c0"
+    },
+    "mu_native_v2/gold": {
+      "successful_updates": 120,
+      "steps": 120,
+      "frozen_base_unchanged": true,
+      "draw_sha256": "c5cacfb3dc5f6902bfce3cb91e33951e58667f921bcef2162e02020c9ae1ed80",
+      "seconds": 18.713735608999997,
+      "checkpoint_sha256": "eab2c22f12516861e1072da66761fa16ce40fb0e13c56c43c03375dfdc3a278c"
+    },
+    "mu_native_v2/gold_tone": {
+      "successful_updates": 120,
+      "steps": 120,
+      "frozen_base_unchanged": true,
+      "draw_sha256": "c5cacfb3dc5f6902bfce3cb91e33951e58667f921bcef2162e02020c9ae1ed80",
+      "seconds": 17.351452498,
+      "checkpoint_sha256": "8e40cbe3821fb0808b062bdd68291728c4a04f86e78e4e865228fc7820005d37"
+    },
+    "mu_canonical_v3/gold": {
+      "successful_updates": 120,
+      "steps": 120,
+      "frozen_base_unchanged": true,
+      "draw_sha256": "c5cacfb3dc5f6902bfce3cb91e33951e58667f921bcef2162e02020c9ae1ed80",
+      "seconds": 19.127326968999995,
+      "checkpoint_sha256": "e43eff5d52ca19ecdc2372edab4112c7932b575f219953fa557974844b11165e"
+    },
+    "mu_canonical_v3/gold_tone": {
+      "successful_updates": 120,
+      "steps": 120,
+      "frozen_base_unchanged": true,
+      "draw_sha256": "c5cacfb3dc5f6902bfce3cb91e33951e58667f921bcef2162e02020c9ae1ed80",
+      "seconds": 17.788089158999995,
+      "checkpoint_sha256": "0b92fb8192ccdc5bf5fb76ed5232c8f75fed732604578017dbfca26cf3f077e9"
+    }
+  },
+  "provenance_correction": {
+    "reason": "An in-flight local precision edit happened after original staging. Preserve executed protocol/source and rerun canonical controls at GradScaler512 to match native v2.",
+    "initial_executed_protocol_sha256": "da8de40b8441a6f07b67e06efa6df1bc710ae35215ece572da3e701447494857",
+    "initial_executed_source_sha256": "78f18950883ab4f654d846e1e508f5c26c4b953ddd938f4ea894891e3375081c",
+    "local_unexecuted_draft_sha256": "35fd7be771a0cb898cddb0328e87861be5e6d323fc8ddd3856e01775795c0315",
+    "native_v2_descriptive_canonical_reference": "Points to this local unexecuted draft; not an executed control. Not used by training loss or data. Final matched control is mu_canonical_v3.",
+    "final_matched_control": "mu_canonical_v3 vs mu_native_v2, same current a_mu_adapt.py and GradScaler512",
+    "prior_weights_and_reports_preserved": true,
+    "initial_pilot_excluded_from_isolated_program_effect_claim": true,
+    "corrected_control_summary_equals_initial_pilot": {
+      "gold": true,
+      "gold_tone": true
+    }
+  },
+  "octave_error_diagnostic": {
+    "counts": {
+      "octave_apart_false_notes": 58,
+      "no_matched_corresponding_true_attack": 1,
+      "corresponding_true_attack_already_detected": 57
+    },
+    "scope": "Same reused16, same mutually exclusive precedence as error_taxonomy_v1. Corresponding pitch may already be detected; not proof of acoustic harmonic cause."
+  },
+  "artifact_audit": {
+    "files": 1565,
+    "bytes": 226921391,
+    "all_sha256_matched": true
+  },
+  "consensus": {
+    "best": null,
+    "baseline": {
+      "note_f1": 0.8184206914218607,
+      "frame_f1": 0.8067860176352792,
+      "union_frame_f1": 0.8206902364499506,
+      "active_exact_match": 0.42057692307692307,
+      "offset_f1": 0.735379569323973,
+      "datasets": {
+        "band_stress_clean": {
+          "note_f1": 0.8516319366030267,
+          "frame_f1": 0.8316474496901372,
+          "union_frame_f1": 0.8497043028641391,
+          "active_exact_match": 0.4276923076923077,
+          "offset_f1": 0.7844652575821423
+        },
+        "band_stress_noisy": {
+          "note_f1": 0.7852094462406947,
+          "frame_f1": 0.7819245855804213,
+          "union_frame_f1": 0.7916761700357622,
+          "active_exact_match": 0.41346153846153844,
+          "offset_f1": 0.6862938810658037
+        }
+      },
+      "score": 0.7762950323977441
+    },
+    "selected": {
+      "note_f1": 0.8184206914218607,
+      "frame_f1": 0.8067860176352792,
+      "union_frame_f1": 0.8206902364499506,
+      "active_exact_match": 0.42057692307692307,
+      "offset_f1": 0.735379569323973,
+      "datasets": {
+        "band_stress_clean": {
+          "note_f1": 0.8516319366030267,
+          "frame_f1": 0.8316474496901372,
+          "union_frame_f1": 0.8497043028641391,
+          "active_exact_match": 0.4276923076923077,
+          "offset_f1": 0.7844652575821423
+        },
+        "band_stress_noisy": {
+          "note_f1": 0.7852094462406947,
+          "frame_f1": 0.7819245855804213,
+          "union_frame_f1": 0.7916761700357622,
+          "active_exact_match": 0.41346153846153844,
+          "offset_f1": 0.6862938810658037
+        }
+      },
+      "score": 0.7762950323977441
+    }
+  },
+  "dataset_roles": "All added head/adapter training rows from acquired training-only sources. GuitarSet8+TECHS32 added for heads; source UUID/GOAT-calibration protection retained. Eleven final Slakh sources remain unscored.",
+  "automatic_application_approved": false,
+  "app_default_changed": false,
+  "test_used": false,
+  "azure_cleanup": {
+    "workload_exit_code": 0,
+    "workload_failure": null,
+    "backup_checkpoints_verified": true,
+    "deallocated": true,
+    "backup_failure": null,
+    "deallocation_failure": null
+  },
+  "azure_status": {
+    "vm": "aiexp-19",
+    "power_state": "PowerState/deallocated",
+    "deallocated": true,
+    "observed_at": "2026-11-20T03:17:28.863872+09:00"
+  },
+  "sources": {
+    "reports/residual_v1/cache_counts.json": "52bdf322767656f9b65fc69e24e9e2fc2cdcc94bda10f27be720e3359d36f400",
+    "reports/residual_v1/sampling_audit.json": "a71db81d0d71867cf69050c5018e0b3b9d7dc213202705d60ffe7063ac468433",
+    "reports/residual_identity_v1/selection.json": "28a6de1467853f7b37631a32ede04203749ba225755023f8fc1da60226a02831",
+    "reports/residual_tree_v2/final_selection.json": "0e0fb1a4392a9b6886c11c6a375639d87274aa6ee12d11a9393c14491cc28543",
+    "reports/residual_fixed_review_v1/comparison.json": "4c365fc66d368ff0d49c807d07afa0f22fd89909dd0e29f6bcbe05d38d5c5494",
+    "reports/mu_adapt_v1/selection.json": "82d3b9b82a494da6fbed4d217d77f65bb7561e3338de689f49a722ada1355347",
+    "reports/mu_adapt_v1/review.json": "e903c23ffbb4f0961e3fa5b7dd68f6071a0110f8f501bb36de0c1bc26914394b",
+    "reports/mu_native_v2/selection.json": "f1e8e10a363f8b93ee20e428b67c2e2fd3db17821f5c696397e645bbbc7e822e",
+    "reports/mu_native_v2/review.json": "dc895a322ac66adb08f43cd35e28b74bac9f26f34de9f450d91ddf3c991c9f10",
+    "reports/mu_consensus_final_v4/selection.json": "479956d3ce3c8d52c813d46081dd7177f0956487a06068729cba50ac539e987c",
+    "reports/mu_consensus_final_v4/review.json": "f8c48867bf2b34881733386a53060f52f49a70f326bff9a05ca4e55809752e88",
+    "reports/azure_session_cleanup.json": "f9d04ef2d03aa281f4a9bc4f4995dda068dc10f2a78ca3344be7789c7c6025fa",
+    "reports/azure_deallocated_20261120.json": "7c8460756d38892c4beb211a05784b4b8f719808b456df7d7fdb3aed8b84d0f7",
+    "reports/residual_calibration_v3/selection.json": "440e45792885c42a94b3f0787a183e6137e6b8667a9795e36bd692867efe7116",
+    "reports/provenance_review_20261120.json": "6d94f99fda95d3d5e22f3d0439b490bebbbc3668c70216f565130f8ce0fd76b2",
+    "reports/mu_canonical_v3/selection.json": "2721ad62927d74020f352d4b1807c7b746f77c8d29e9377471ad02d517af7301",
+    "reports/mu_canonical_v3/review.json": "35e8965161560f0b0e79a61e25c3d9018c05d850fe20d6641d2ef971e1f72518",
+    "reports/octave_missing_diagnostic_20261120.json": "dde40afaf71243ceb8e8bb3dc76a0efb5aaff14ffa3207db0828726b5b88604a",
+    "reports/artifact_audit_20261120.json": "e8a75fac2c9d34cbe8dbf4b4efe1a508b358b393227ac6f116b97e542f50675e"
+  }
+}
