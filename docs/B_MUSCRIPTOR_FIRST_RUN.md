@@ -33,7 +33,7 @@ BAND2TAB_UV=/Users/haruya/Downloads/band2tab/.venv-bootstrap/bin/uv \
 BASH
 ```
 
-成功条件：依存の整合性チェック、MuScriptorのインポートとCLIヘルプ、既存B用17件のテストが成功し、最後に「環境準備OK」と出る。
+成功条件：依存の整合性チェック、MuScriptorのインポートとCLIヘルプ、Bワークフロー用19件のテストが成功し、最後に「環境準備OK」と出る。
 `MPS利用可能: True` は利用可否の検出であり、MPSで採譜が成功した意味ではない。
 空き容量36.9 GiBだけでは必要容量を確定できないため、インストールの実際の結果を確認する。
 
@@ -177,3 +177,11 @@ Finderで選択された **handoff内のnotes.json** を指定し、「音符JSO
 B用テスト計24件が成功。書出しMIDIも読み戻し、音高一致・秒時刻の差が1 MIDI tick以内か検査する。
 構造確認用74音の譜面はMusicXML 4.0公式スキーマとLinux版MuseScore 4.7.7で読込み・PDF出力を確認した。
 この構造確認では運指の未割当1件が明示され、元の74音はJSON・MIDIに保持された。
+
+## 実録音のMac受入れ完了
+
+利用者から、MuseScoreで警告なし、Chromeの音符表への読み込み成功、
+表を変更せず「修正を反映する」後も69音と拍設定が一致したとのログを受領した。
+保存先は `results/ui/band2tab_2vh5115m/edited_f479et2o`。
+JSONとMIDIの音高・秒時刻、運指、弦競合0、MusicXMLの音価・拍数、issues 0もすべてPASS。
+範囲とAへの次の受渡し条件は [B_ACCEPTANCE_20261119.md](B_ACCEPTANCE_20261119.md) にまとめた。

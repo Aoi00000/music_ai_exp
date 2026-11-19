@@ -51,7 +51,7 @@ BAND2TAB_PYTHON="$PWD/.venv/bin/python" bash setup_mac.sh --score-only
 BASH
 ```
 
-期待値：B用テスト17件がOK、既知音符9音・issues 0、ターミナルにローカルURLが表示される。
+期待値：Bワークフロー用テスト19件がOK、既知音符9音・issues 0、ターミナルにローカルURLが表示される。
 Chromeで `http://127.0.0.1:8501` を開く。起動時の任意のメール登録は表示しない。
 ポート8501が他のアプリで使用中なら `BAND2TAB_PORT=8502 ./Band2Tab.command`。
 終了は起動したターミナルでCtrl+C。

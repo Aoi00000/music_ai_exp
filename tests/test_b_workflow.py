@@ -234,5 +234,46 @@ class ScoreWorkflow(unittest.TestCase):
         self.assertEqual((fixed['bpm'],fixed['beats_per_bar'],fixed['grid']),(96.,3,3))
 
 
+class SeparateSuggestionHandoff(unittest.TestCase):
+    def fixture(self):
+        raw = {'guitar':[dict(pitch=60,onset=0.,offset=.5)],
+               'bass':[dict(pitch=28,onset=0.,offset=1.)]}
+        suggestion = {'guitar':raw['guitar']+[dict(pitch=64,onset=.5,offset=1.)],
+                      'bass':raw['bass']}
+        return dict(parts=raw,raw_parts=raw,suggested_parts=suggestion,
+                    requires_review=True,automatic_application_approved=False,
+                    ranker_sha256='fixture-not-a-real-model')
+
+    def test_separate_suggestions_require_tempo_and_explicit_selection(self):
+        source = self.fixture()
+        with self.assertRaisesRegex(ValueError,'BPM'):
+            prepare_handoff(source)
+        raw = prepare_handoff(source,bpm=96.)
+        proposal = prepare_handoff(source,'corrected',bpm=96.)
+        self.assertEqual(raw['parts'],source['parts'])
+        self.assertEqual(proposal['parts'],source['suggested_parts'])
+        self.assertEqual(raw['proposed_parts'],source['suggested_parts'])
+        self.assertFalse(raw['corrector_applied'])
+        self.assertFalse(proposal['automatic_application_approved'])
+        self.assertNotIn('bpm',source)
+        incomplete = self.fixture();incomplete.pop('raw_parts')
+        with self.assertRaisesRegex(ValueError,'raw_parts'):
+            prepare_handoff(incomplete,bpm=96.)
+
+    def test_suggestion_export_reimport_keeps_raw_edits_and_proposal(self):
+        source = self.fixture()
+        raw = prepare_handoff(source,bpm=96.)
+        rows = editor_rows(raw,'guitar');rows[0]['pitch']=61
+        edited = replace_part(raw,'guitar',rows)
+        with tempfile.TemporaryDirectory() as folder:
+            export_document(edited,folder)
+            saved = json.loads((Path(folder)/'notes.json').read_text())
+        self.assertEqual(prepare_handoff(saved)['parts']['guitar'][0]['pitch'],61)
+        self.assertEqual(prepare_handoff(saved,'corrected')['parts'],source['suggested_parts'])
+        self.assertEqual(saved['raw_parts'],source['raw_parts'])
+        self.assertEqual(saved['ranker_sha256'],'fixture-not-a-real-model')
+        self.assertFalse(saved['automatic_application_approved'])
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -69,11 +69,18 @@ def prepare_handoff(document, note_set='raw', bpm=None, meter=None, grid=None):
         raise ValueError('音符JSONはオブジェクトで指定してください。')
     result = deepcopy(document)
     corrected = result.get('corrector_applied') is True
-    has_proposal = corrected or (result.get('source_corrector_applied') is True and isinstance(result.get('proposed_parts'), dict))
+    saved_proposal = result.get('source_corrector_applied') is True and isinstance(result.get('proposed_parts'), dict)
+    separate_suggestion = isinstance(result.get('suggested_parts'), dict)
+    has_proposal = corrected or saved_proposal or separate_suggestion
     if has_proposal and not isinstance(result.get('raw_parts'), dict):
         raise ValueError('補正前のraw_partsがありません。A担当から比較用JSONを受け取ってください。')
     if has_proposal:
-        proposal = document['parts'] if corrected else document['proposed_parts']
+        if corrected:
+            proposal = document['parts']
+        elif saved_proposal:
+            proposal = document['proposed_parts']
+        else:
+            proposal = document['suggested_parts']
         baseline = document['raw_parts'] if corrected else document['parts']
         result['proposed_parts'] = deepcopy(proposal)
         result['parts'] = deepcopy(baseline if note_set == 'raw' else proposal)
