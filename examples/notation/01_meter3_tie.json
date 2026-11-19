@@ -1,0 +1,17 @@
+{
+  "title": "01 - 3/4 sustain across barlines",
+  "description_ja": "3/4、ギターE4を8拍持続。3小節にまたがるタイを確認。",
+  "parts": {
+    "guitar": [
+      {
+        "pitch": 64,
+        "onset": 0.0,
+        "offset": 4.0
+      }
+    ]
+  },
+  "bpm": 120.0,
+  "beats_per_bar": 3,
+  "grid": 3,
+  "test_scope": "notation_only_known_notes_not_audio_accuracy"
+}

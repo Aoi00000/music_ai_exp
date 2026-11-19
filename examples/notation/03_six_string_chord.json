@@ -1,0 +1,42 @@
+{
+  "title": "03 - Six strings with independent sustain",
+  "description_ja": "標準ギターの開放弦6音が同時発音。最低音E2だけ2.5拍、他の5音は1拍。",
+  "parts": {
+    "guitar": [
+      {
+        "pitch": 40,
+        "onset": 0.0,
+        "offset": 1.25
+      },
+      {
+        "pitch": 45,
+        "onset": 0.0,
+        "offset": 0.5
+      },
+      {
+        "pitch": 50,
+        "onset": 0.0,
+        "offset": 0.5
+      },
+      {
+        "pitch": 55,
+        "onset": 0.0,
+        "offset": 0.5
+      },
+      {
+        "pitch": 59,
+        "onset": 0.0,
+        "offset": 0.5
+      },
+      {
+        "pitch": 64,
+        "onset": 0.0,
+        "offset": 0.5
+      }
+    ]
+  },
+  "bpm": 120.0,
+  "beats_per_bar": 4,
+  "grid": 4,
+  "test_scope": "notation_only_known_notes_not_audio_accuracy"
+}

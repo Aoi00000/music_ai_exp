@@ -1,0 +1,44 @@
+{
+  "title": "04 - Sustains and repeated attacks",
+  "description_ja": "ギターC4を4拍持続し、その間にE4とD4の弾き直し。ベースE1も2回発音。",
+  "parts": {
+    "guitar": [
+      {
+        "pitch": 60,
+        "onset": 0.0,
+        "offset": 2.0
+      },
+      {
+        "pitch": 64,
+        "onset": 0.0,
+        "offset": 1.0
+      },
+      {
+        "pitch": 62,
+        "onset": 1.0,
+        "offset": 1.5
+      },
+      {
+        "pitch": 62,
+        "onset": 1.5,
+        "offset": 1.75
+      }
+    ],
+    "bass": [
+      {
+        "pitch": 28,
+        "onset": 0.0,
+        "offset": 1.0
+      },
+      {
+        "pitch": 28,
+        "onset": 1.0,
+        "offset": 1.5
+      }
+    ]
+  },
+  "bpm": 120.0,
+  "beats_per_bar": 4,
+  "grid": 4,
+  "test_scope": "notation_only_known_notes_not_audio_accuracy"
+}

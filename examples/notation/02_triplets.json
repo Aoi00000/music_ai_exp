@@ -1,0 +1,32 @@
+{
+  "title": "02 - Eighth-note triplets",
+  "description_ja": "4/4、最初の1拍がC4・D4・E4の8分3連、その後G4を1拍。",
+  "parts": {
+    "guitar": [
+      {
+        "pitch": 60,
+        "onset": 0.0,
+        "offset": 0.16666666666666666
+      },
+      {
+        "pitch": 62,
+        "onset": 0.16666666666666666,
+        "offset": 0.3333333333333333
+      },
+      {
+        "pitch": 64,
+        "onset": 0.3333333333333333,
+        "offset": 0.5
+      },
+      {
+        "pitch": 67,
+        "onset": 0.5,
+        "offset": 1.0
+      }
+    ]
+  },
+  "bpm": 120.0,
+  "beats_per_bar": 4,
+  "grid": 3,
+  "test_scope": "notation_only_known_notes_not_audio_accuracy"
+}
