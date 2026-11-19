@@ -1,0 +1,3 @@
+# Rebuild the Japanese PDF on macOS; figures come from the measured JSON.
+reportlab==5.1.0
+pypdf==6.21.4

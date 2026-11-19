@@ -35,6 +35,10 @@ def working_directory(path):
     finally:os.chdir(previous)
 
 def load_model(device='cuda'):
+    # Keep library metadata caches in ignored workspace storage on both hosts.
+    os.environ.setdefault('HF_HOME',str(Path('vendor/hf_cache_mac').resolve()))
+    os.environ.setdefault('MPLCONFIGDIR',str(Path('vendor/mpl_cache_mac').resolve()))
+    os.environ.setdefault('XDG_CACHE_HOME',str(Path('vendor/cache_mac').resolve()))
     import setuptools  # Register distutils compatibility for upstream WandB on Python 3.12.
     from model_helper import load_model_checkpoint
     from model.ymt3 import YourMT3

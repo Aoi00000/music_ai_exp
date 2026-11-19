@@ -1,5 +1,6 @@
 # Separate native environment; keep the MuScriptor environment unchanged.
 -r requirements.txt
+numpy==1.26.4
 torch==2.9.1
 torchaudio==2.9.1
 transformers==4.45.1

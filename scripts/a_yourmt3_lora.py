@@ -23,10 +23,9 @@ def role_channels(model):
     if len(set(channels))!=2:raise ValueError('Expected independent guitar/bass channels')
     return channels
 
-def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json',band_manifest=None):
+def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json',band_manifest=None,extra_bass=False,goat_mode=False,augmentation_manifest=None):
     rows=rows_for(False);train=[r for r in rows if r['split']=='train' and r['dataset'] in ALLOWED]
-    goat_mode=REPORT.name.startswith('yourmt3_lora_goat')
-    if REPORT.name.endswith('_expanded') or goat_mode:
+    if extra_bass or goat_mode:
         extra=json.loads(Path('data/yourmt3_lora_extra/manifest.json').read_text())
         forbidden={r['group'] for r in json.loads(Path('data/candidate_v2/manifest.json').read_text()) if r['split']!='train'}
         if any(r['split']!='train' or r['group'] in forbidden for r in extra):raise ValueError('Expanded bass source leakage')
@@ -43,6 +42,10 @@ def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json',band_manife
         if any(r['split']!='train' or r['component_groups']['guitar'] not in allowed_g or r['component_groups']['bass'] not in allowed_b or r['component_groups']['background'] not in allowed_bg for r in band):
             raise ValueError('Training mixture component leakage')
         train+=band
+    if augmentation_manifest:
+        augmented=json.load(open(augmentation_manifest));allowed={(r['group'],r['split']) for r in rows if r['dataset']=='slakh_candidate_new' and r['split'] in ('train','val')}
+        if any((r['group'],r['split']) not in allowed for r in augmented):raise ValueError('Augmentation source leakage')
+        train+=[r for r in augmented if r['split']=='train'];val+=[r for r in augmented if r['split']=='val']
     for r in val:by[r['dataset']].append(r)
     monitor=[]
     for ds,items in sorted(by.items()):
@@ -59,10 +62,11 @@ def prepare_protocol(info,goat_manifest='data/goat_v1/manifest.json',band_manife
         'target_channels':'Guitar and bass only, ignore unannotated instrument channels',
         'teacher_training_only':'Author overlap trimming; held notes use ties; source annotations and evaluation labels are unchanged',
         'test_used_for_selection':False,'automatic_application_approved':False}
-    if REPORT.name.endswith('_expanded') or goat_mode:report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
+    if extra_bass or goat_mode:report['extra_manifest_sha256']=sha('data/yourmt3_lora_extra/manifest.json')
     if goat_mode:report['goat_manifest_sha256']=sha(goat_manifest)
     if goat_mode and goat_manifest!='data/goat_v1/manifest.json':report['goat_manifest_path']=goat_manifest
     if band_manifest:report['band_manifest_sha256']=sha(band_manifest)
+    if augmentation_manifest:report['augmentation_manifest_sha256']=sha(augmentation_manifest)
     path=REPORT/'protocol.json'
     if path.exists():
         if json.loads(path.read_text())!=report:raise ValueError('LoRA protocol or source changed')
@@ -146,7 +150,10 @@ def monitor(model,rows,folder):
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['smoke','train']);p.add_argument('--name',default='decoder');p.add_argument('--scope',choices=['decoder','both'],default='decoder')
     p.add_argument('--rank',type=int,default=8);p.add_argument('--alpha',type=float,default=16.);p.add_argument('--dropout',type=float,default=.05);p.add_argument('--targets',choices=['attention','wide'],default='attention')
-    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');p.add_argument('--goat-manifest',default='data/goat_v1/manifest.json');p.add_argument('--monitor-steps',type=int,nargs='+');p.add_argument('--band-manifest');a=p.parse_args()
+    p.add_argument('--lr',type=float,default=.0001);p.add_argument('--steps',type=int,default=600);p.add_argument('--seed',type=int,default=17);p.add_argument('--anchor-kl',type=float,default=0.);p.add_argument('--pitch-augment',action='store_true');p.add_argument('--solo-balanced',action='store_true');p.add_argument('--extra-bass',action='store_true');p.add_argument('--goat',action='store_true');p.add_argument('--absent-weight',type=float,default=0.);p.add_argument('--init-adapter');p.add_argument('--goat-manifest',default='data/goat_v1/manifest.json');p.add_argument('--monitor-steps',type=int,nargs='+');p.add_argument('--band-manifest')
+    p.add_argument('--augmentation-manifest');p.add_argument('--retention-cache',type=Path);p.add_argument('--retention-rate',type=float,default=.35)
+    p.add_argument('--tone-augment',action='store_true');a=p.parse_args()
+    if not 0<=a.retention_rate<1:p.error('Retention rate must be within [0,1)')
     if a.monitor_steps and any(s<1 or s>a.steps for s in a.monitor_steps):p.error('Monitor steps must fall within the learning run')
     global REPORT
     if a.extra_bass:REPORT=Path('reports/yourmt3_lora_expanded')
@@ -154,12 +161,13 @@ def main():
     if a.band_manifest:
         if not a.goat or not a.solo_balanced:p.error('Band mixtures require GOAT and balanced sampling')
         REPORT=Path('reports/yourmt3_lora_goat_band_v1')
+    if a.augmentation_manifest or a.retention_cache:REPORT=Path('reports/yourmt3_retention')/a.name
     if a.command=='train' and Path('reports/yourmt3_lora/selection.json').exists():
         raise RuntimeError('Final selection frozen; new learning requires a separate experiment and fresh holdout')
     import os
     os.environ['WANDB_MODE']='disabled';os.environ['HF_HUB_DISABLE_TELEMETRY']='1';torch.set_num_threads(2)
     random.seed(a.seed);np.random.seed(a.seed);torch.manual_seed(a.seed);torch.cuda.manual_seed_all(a.seed)
-    model,info=load_model();train,val,validation=prepare_protocol(info,a.goat_manifest,a.band_manifest);channels=role_channels(model)
+    model,info=load_model();train,val,validation=prepare_protocol(info,a.goat_manifest,a.band_manifest,a.extra_bass,a.goat,a.augmentation_manifest);channels=role_channels(model)
     base_parameters=list(model.parameters());base_digest=frozen_parameter_digest(base_parameters)
     audios={}
     for r in train:
@@ -187,12 +195,22 @@ def main():
                 m.a.copy_(state['a']);m.b.copy_(state['b'])
         warmstart={'sha256':sha(a.init_adapter),'modules_restored':len(previous['adapters']),
             'source_run':previous['config']['name'],'source_step':previous['step'],'optimizer_reset':True}
-    parameters=[p for p in model.parameters() if p.requires_grad];config={k:v for k,v in vars(a).items() if k!='command'}
+    parameters=[p for p in model.parameters() if p.requires_grad];config={k:(str(v) if isinstance(v,Path) else v) for k,v in vars(a).items() if k!='command'}
     config.update(base_sha256=info['checkpoint_sha256'],protocol_sha256=sha(REPORT/'protocol.json'),
         trainable_parameters=sum(p.numel() for p in parameters),modules=list(adapters),target_channels=channels,
         zero_adapter_max_logit_difference=difference,token_roundtrip=roundtrip,
         warmstart=warmstart,
         monitor_steps=sorted(set(a.monitor_steps+[a.steps])) if a.monitor_steps else sorted({min(100,a.steps),min(300,a.steps),min(600,a.steps),min(1500,a.steps),a.steps}))
+    if a.retention_cache:
+        retention=json.load(open(a.retention_cache/'index.json'))
+        if retention['base_sha256']!=info['checkpoint_sha256']:raise ValueError('Retention teacher differs from frozen base')
+        if any(r['split'] not in ('train','val') for r in retention['records']):raise ValueError('Retention cache contains a test source')
+        config['retention_index_sha256']=sha(a.retention_cache/'index.json')
+        replay=[r for r in retention['records'] if r['split']=='train' and r['teacher_bass_notes']>0]
+        if not replay:raise ValueError('No active bass teacher examples')
+        if any(sha(r['cache'])!=r['cache_sha256'] for r in replay):raise ValueError('Retention cache checksum mismatch')
+        config['retention_training_windows']=len(replay)
+        replay_data={r['id']:torch.load(r['cache'],map_location='cpu',weights_only=True) for r in replay}
     if a.command=='smoke':
         opt=torch.optim.AdamW(parameters,lr=a.lr)
         with torch.autocast('cuda',dtype=torch.float16):value=target_loss(model(tensor,labels)['logits'],labels,channels)
@@ -211,29 +229,52 @@ def main():
         if a.solo_balanced and domain=='bass':domain='bass_solo' if r['dataset']=='filobass' else 'bass_mix'
         if a.goat and r['dataset'].startswith('goat_'):domain='goat'
         if a.band_manifest and r['dataset'].startswith('band_training_'):domain='band'
+        if a.augmentation_manifest and r['dataset'].startswith('bass_aug_'):domain='aug'
         family[domain][r['group']].append(r)
     domains,weights=(('bass_solo','bass_mix','guitar','synth'),(.3,.25,.2,.25)) if a.solo_balanced else (('bass','guitar','synth'),(.4,.3,.3))
     if a.goat:
         if not a.solo_balanced:raise ValueError('GOAT experiment uses explicitly balanced solo/mix sampling')
         domains,weights=('bass_solo','bass_mix','guitar','synth','goat'),(.2,.15,.1,.15,.4)
     if a.band_manifest:domains,weights=('bass_solo','bass_mix','guitar','synth','goat','band'),(.15,.1,.1,.1,.25,.3)
-    history=[];running=[];updates=0;best=None;started=time.monotonic()
+    if a.augmentation_manifest:domains,weights=('bass_solo','bass_mix','guitar','synth','goat','band','aug'),(.1,.1,.1,.1,.2,.15,.25)
+    history=[];running=[];updates=0;best=None;started=time.monotonic();retention_steps=0;gt_steps=0;replay_random=random.Random(a.seed+3109)
     with (folder/'samples.jsonl').open('w') as samples:
         for step in range(1,a.steps+1):
-            domain=random.choices(domains,weights)[0];group=random.choice(sorted(family[domain]));r=random.choice(family[domain][group])
-            x,tokens,trace=sample(r,audios[r['id']],model,a.pitch_augment);samples.write(json.dumps({'step':step,**trace})+'\n')
-            tensor=torch.from_numpy(x)[None,None].to('cuda');labels=torch.from_numpy(tokens).to('cuda')
+            is_retention=bool(a.retention_cache) and int(step*a.retention_rate)>int((step-1)*a.retention_rate)
+            if is_retention:
+                retention_steps+=1;r=replay_random.choice(replay);cached=replay_data[r['id']];tensor=cached['audio'].to('cuda');labels=cached['labels'].to('cuda')
+                trace={'id':r['id'],'pseudo_label_retention':True,'teacher_notes_not_ground_truth':True}
+            else:
+                gt_steps+=1
+                domain=random.choices(domains,weights)[0];group=random.choice(sorted(family[domain]));r=random.choice(family[domain][group])
+                x,tokens,trace=sample(r,audios[r['id']],model,a.pitch_augment)
+                if a.tone_augment:
+                    import hashlib
+                    from band2tab.augment import tone_colour
+                    # Independent RNG preserves the control's source/crop order.
+                    key=f"tone-v1-{a.seed}-{step}-{r['id']}-{trace['start_sample']}"
+                    seed=int(hashlib.sha256(key.encode()).hexdigest()[:16],16)
+                    allow_drive=r['kind']=='solo' and bool(r['parts'].get('guitar')) and not r['parts'].get('bass')
+                    x,trace['tone_augmentation']=tone_colour(x,model.audio_cfg['sample_rate'],seed,allow_drive)
+                tensor=torch.from_numpy(x)[None,None].to('cuda');labels=torch.from_numpy(tokens).to('cuda')
+            samples.write(json.dumps({'step':step,**trace})+'\n')
             for m in adapters.values():m.train()
             opt.zero_grad(set_to_none=True);teacher=None
-            if a.anchor_kl and r['dataset'] in ('slakh_candidate_new','guitarset'):
+            if not is_retention and a.anchor_kl and r['dataset'] in ('slakh_candidate_new','guitarset'):
                 with disabled(adapters),torch.no_grad(),torch.autocast('cuda',dtype=torch.float16):teacher=model(tensor,labels)['logits']
             with torch.autocast('cuda',dtype=torch.float16):
-                logits=model(tensor,labels)['logits'];individual=channel_losses(logits,labels,channels);ce=individual.mean()
-                kl=anchor_loss(logits,teacher,labels,channels) if teacher is not None else torch.zeros((),device='cuda');value=ce+a.anchor_kl*kl
+                logits=model(tensor,labels)['logits']
+                if is_retention:
+                    from band2tab.retention import retention_loss
+                    c=channels[1];kl,ce=retention_loss(logits[:,c:c+1],cached['teacher_logits'].to('cuda'),labels[:,c:c+1])
+                    value=kl+.25*ce;individual=torch.stack([ce*0,ce])
+                else:
+                    individual=channel_losses(logits,labels,channels);ce=individual.mean()
+                    kl=anchor_loss(logits,teacher,labels,channels) if teacher is not None else torch.zeros((),device='cuda');value=ce+a.anchor_kl*kl
                 # Other channels are genuinely absent only in known isolated
                 # instrument recordings. Full-band channels remain unlabelled.
                 absent=torch.zeros((),device='cuda')
-                if a.absent_weight and r['kind']=='solo':
+                if not is_retention and a.absent_weight and r['kind']=='solo':
                     other=[c for c in range(logits.shape[1]) if c not in channels]
                     absent=target_loss(logits,labels,other);value=value+a.absent_weight*absent
             if not torch.isfinite(value):raise ValueError('Non-finite training loss')
@@ -242,7 +283,7 @@ def main():
             running.append([float(value.detach()),float(ce.detach()),float(kl.detach()),
                 float(individual[0].detach()),float(individual[1].detach()),float(absent.detach())])
             if step%25==0:
-                values=np.mean(running,0);running=[];history.append({'step':step,'optimizer_updates':updates,'loss':float(values[0]),'ce':float(values[1]),'kl':float(values[2]),
+                values=np.mean(running,0);running=[];history.append({'step':step,'optimizer_updates':updates,'ground_truth_steps':gt_steps,'pseudo_retention_steps':retention_steps,'loss':float(values[0]),'ce':float(values[1]),'kl':float(values[2]),
                     'guitar_ce':float(values[3]),'bass_ce':float(values[4]),'other_absent_ce':float(values[5]),'seconds':time.monotonic()-started})
                 save(folder/'history.json',history);print('LORA_TRAIN',a.name,history[-1],flush=True)
             if step not in config['monitor_steps']:continue

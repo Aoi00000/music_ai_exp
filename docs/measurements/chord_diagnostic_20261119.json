@@ -1,0 +1,33 @@
+{
+  "summary": {
+    "structure_exact": 0.22163012611369018,
+    "root": 0.8209508990312581,
+    "triads": 0.38852170161006,
+    "tetrads_inv": 0.2550151560876473
+  },
+  "groups": {
+    "guitarset_BN2": {
+      "structure_exact": 0.17987942945688215,
+      "root": 0.9500068936465974,
+      "triads": 0.3135280910840291,
+      "tetrads_inv": 0.2800345193787535
+    },
+    "guitarset_Funk2": {
+      "structure_exact": 0.32247746962032675,
+      "root": 0.6309407523693238,
+      "triads": 0.4394505494505494,
+      "tetrads_inv": 0.32247746962032675
+    },
+    "guitarset_Rock2": {
+      "structure_exact": 0.1625334792638616,
+      "root": 0.8819050510778527,
+      "triads": 0.4125864642956016,
+      "tetrads_inv": 0.1625334792638616
+    }
+  },
+  "recordings": 18,
+  "scored_seconds": 117.0,
+  "protocol_sha256": "10df4dddcaacffb3ee9b720d6022d356276a34719ad8040697270993c52423e9",
+  "warning": "Repeated project validation data; solo guitar, three styles but shared progression2 template. No natural-band or unseen-composition claim.",
+  "learning": false
+}

@@ -1,0 +1,28 @@
+{
+  "conditions": 16,
+  "note_counts": {
+    "guitar_tp": 463,
+    "guitar_fn": 101,
+    "guitar_fp": 122,
+    "guitar_octave_apart_onset": 58,
+    "bass_tp": 249,
+    "bass_fn": 47,
+    "bass_fp": 72,
+    "bass_octave_apart_onset": 13,
+    "bass_other_part_same_pitch_onset": 3,
+    "bass_other_false_note": 43,
+    "guitar_other_false_note": 42,
+    "bass_same_pitch_inside_existing_note": 13,
+    "guitar_same_pitch_inside_existing_note": 19,
+    "guitar_other_part_same_pitch_onset": 3
+  },
+  "matched_known_offset_notes": 704,
+  "offset_error_seconds": {
+    "median": -0.0011174242424304426,
+    "median_absolute": 0.01589736652236695,
+    "p90_absolute": 0.05345705266955236,
+    "shorter_by_over150ms": 11,
+    "longer_by_over150ms": 35
+  },
+  "caveat": "Descriptive mutually exclusive categories with stated precedence, not proof of acoustic cause. Repeated 16-condition development set. Does not imply jazz-specific weakness."
+}

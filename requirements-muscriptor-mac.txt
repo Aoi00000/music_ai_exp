@@ -1,0 +1,13 @@
+# Isolated from YourMT3's NumPy 1.26 environment (Apple Silicon).
+muscriptor==0.4.0
+torch==2.9.1
+torchaudio==2.9.1
+numpy==2.2.6
+scipy==1.13.1
+librosa==0.10.2.post1
+pretty_midi==0.2.10
+mir_eval==0.8.2
+PyYAML==6.0.2
+setuptools==80.9.0
+demucs==4.0.1
+imageio-ffmpeg==0.6.0

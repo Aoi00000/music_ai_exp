@@ -1,0 +1,19 @@
+{
+  "archive": "output/handoff/band2tab_AB_integration_20261119.zip",
+  "archive_sha256": "ba6ebcd6a1c6f4c1f3e1f8484ef5c9c55e30a8ff3894c42f1171644a687b71ba",
+  "bytes": 3380045,
+  "members": 18,
+  "all_member_sha256_verified": true,
+  "baseline_counts": {
+    "guitar": 90,
+    "bass": 134
+  },
+  "corrected_counts": {
+    "guitar": 90,
+    "bass": 134
+  },
+  "correction_is_identity": true,
+  "generated": "2026-11-19",
+  "source_id": "ref_mix_Track00013",
+  "integration_fixture_not_accuracy_evaluation": true
+}

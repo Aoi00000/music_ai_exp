@@ -15,3 +15,5 @@ downloads/
 backups/
 *.part
 *.tmp
+tmp/pdfs/
+output/handoff/

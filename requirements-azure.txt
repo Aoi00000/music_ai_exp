@@ -1,0 +1,2 @@
+# Isolated first-party CLI; credentials stay in vendor/private/azure_cli.
+azure-cli==2.93.0

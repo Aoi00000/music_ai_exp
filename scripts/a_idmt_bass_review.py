@@ -56,17 +56,23 @@ def prepare():
     print('IDMT_BASS_PREPARED',len(rows),flush=True)
 
 
-def evaluate(tag,adapter):
+def evaluate(tag,adapter,snapshot=Path('reports/yourmt3_lora/development_selection.json'),seen_regression=False,threads=4):
     import torch
     from band2tab.lora import restore
     from band2tab.score import read_midi
     from scripts.a_candidate_train import metrics,aggregate,bound,KEYS
     from scripts.a_candidate_review import errors,matching
     from scripts.a_yourmt3_predict import load_model,transcribe
-    selection=json.load(open('reports/yourmt3_lora/development_selection.json'))
+    selection=json.load(open(snapshot))
+    if snapshot!=Path('reports/yourmt3_lora/development_selection.json') and not (seen_regression and selection.get('seen_regression_permitted')):
+        raise ValueError('A new snapshot requires an explicit already-seen regression protocol')
     if adapter and sha(adapter)!=selection['adapter_sha256']:raise ValueError('Only the preselected development adapter may be evaluated')
+    acquisition=json.load(open(REPORT/'acquisition.json'))
+    if sha(REPORT/'manifest.json')!=acquisition['manifest_sha256']:raise ValueError('External labels changed')
+    if any(sha(r['path'])!=r['sha256'] for r in acquisition['files']):raise ValueError('External raw source changed')
     rows=json.load(open(REPORT/'manifest.json'));manifest_sha=sha(REPORT/'manifest.json')
-    torch.set_num_threads(4);model,info=load_model('cpu');adapter_sha=None
+    torch.set_num_threads(threads);model,info=load_model('cpu');adapter_sha=None
+    if info['checkpoint_sha256']!=selection['base_sha256']:raise ValueError('External evaluation base differs from selection')
     if adapter:
         state=torch.load(adapter,map_location='cpu',weights_only=True)
         if state['base_sha256']!=info['checkpoint_sha256']:raise ValueError('Adapter/base mismatch')
@@ -91,8 +97,8 @@ def evaluate(tag,adapter):
         items.append((row,record['metrics']));tracks.append(record)
         print('IDMT_EXTERNAL',tag,row['id'],round(record['metrics']['note_f1'],4),flush=True)
     save(folder/'comparison.json',{'summary':aggregate(items),'tracks':tracks,'adapter_sha256':adapter_sha,
-        'selection_sha256':sha('reports/yourmt3_lora/development_selection.json'),'manifest_sha256':manifest_sha,
-        'external_snapshot_only':True,'natural_band_recording':False,'test_used_for_selection':False,
+        'selection_sha256':sha(snapshot),'manifest_sha256':manifest_sha,
+        'external_snapshot_only':not seen_regression,'previously_inspected_regression':seen_regression,'natural_band_recording':False,'test_used_for_selection':False,
         'limitations':['17 short electric-bass lines, not 17 independent performers or full band songs.',
                        'Pretraining overlap is unknown. Do not tune the selected model using these scores.',
                        'All original events retained, including dead notes and pitch-modulated techniques; fixed-note scoring has limitations.']})
@@ -100,8 +106,9 @@ def evaluate(tag,adapter):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','evaluate']);p.add_argument('--tag');p.add_argument('--adapter',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','evaluate']);p.add_argument('--tag');p.add_argument('--adapter',type=Path)
+    p.add_argument('--snapshot',type=Path,default=Path('reports/yourmt3_lora/development_selection.json'));p.add_argument('--seen-regression',action='store_true');p.add_argument('--threads',type=int,default=4);a=p.parse_args()
     if a.command=='prepare':prepare()
     else:
         if not a.tag:p.error('--tag required')
-        evaluate(a.tag,a.adapter)
+        evaluate(a.tag,a.adapter,a.snapshot,a.seen_regression,a.threads)
