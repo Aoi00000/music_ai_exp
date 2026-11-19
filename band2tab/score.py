@@ -89,76 +89,136 @@ def _add(parent,tag,text=None,**attrs):
     if text is not None:e.text=str(text)
     return e
 
-def musicxml(parts, dest, bpm=120., beats_per_bar=4, grid=4, tunings=None, beats=None):
-    """One tablature staff per part, one voice per string, ties across measures.
-
-    Output is a notation view. Quantization collisions are reported and the
-    colliding note is omitted ONLY from the engraving, not raw JSON/MIDI.
-    """
-    tunings=tunings or TUNINGS; score=ET.Element('score-partwise',version='4.0')
-    work=_add(score,'work');_add(work,'work-title','Band2Tab - review draft')
-    plist=_add(score,'part-list'); issues=[]
-    divisions=12; tick=divisions//grid; bar=beats_per_bar*grid
-    for pi,(part,notes) in enumerate(parts.items(),1):
-        pid=f'P{pi}';sp=_add(plist,'score-part',id=pid);_add(sp,'part-name',part.title())
-        tuning=tunings[part]; p=_add(score,'part',id=pid)
-        by_string=defaultdict(list)
-        for n in sorted(notes,key=lambda n:(n['q_start'],n['q_end'])):
-            if n.get('string') is None: continue
-            voice=by_string[n['string']]
-            if voice and n['q_start']<voice[-1]['q_end']:
-                issues.append({'part':part,'note_id':n['id'],'reason':'quantization_collision'})
+def _rhythm_chunks(length, grid, start=0):
+    """Spell grid durations with standard note types, dots and 3:2 tuplets."""
+    from fractions import Fraction
+    choices = {}
+    for kind, beats in [('whole', Fraction(4)), ('half', Fraction(2)),
+                        ('quarter', Fraction(1)), ('eighth', Fraction(1, 2)),
+                        ('16th', Fraction(1, 4))]:
+        for dots in (0, 1):
+            ticks = beats * grid * (Fraction(3, 2) if dots else 1)
+            if ticks.denominator != 1:
                 continue
-            voice.append(n)
-        maxend=max((n['q_end'] for ns in by_string.values() for n in ns),default=bar)
-        count=max(1,math.ceil(maxend/bar))
+            ticks = int(ticks)
+            candidate = (dots, kind)
+            if ticks not in choices or dots < choices[ticks][0]:
+                choices[ticks] = candidate
+    while length:
+        if grid == 3 and (start % grid or length < grid):
+            # Complete each beat's three eighth-note tuplet slots. Mixed
+            # half/eighth tuplets can make MuseScore invent a closing rest.
+            size, kind, dots, triplet = 1, 'eighth', 0, True
+        else:
+            size = max(size for size in choices if size <= length)
+            dots, kind = choices[size]
+            triplet = False
+        yield size, kind, dots, triplet
+        length -= size
+        start += size
+
+
+def _note_value(element, kind, dots, triplet):
+    _add(element, 'type', kind)
+    for _ in range(dots):
+        _add(element, 'dot')
+    if triplet:
+        ratio = _add(element, 'time-modification')
+        _add(ratio, 'actual-notes', 3)
+        _add(ratio, 'normal-notes', 2)
+
+
+def musicxml(parts, dest, bpm=120., beats_per_bar=4, grid=4, tunings=None, beats=None):
+    """One TAB staff per instrument; time slices form chords in one voice.
+
+    Independent sustains are tied across slice and measure boundaries. This
+    avoids a separate voice for every string (MuseScore supports four voices
+    per staff). Every duration is explicitly spelled, rather than asking an
+    importer to round arbitrary lengths such as a 2.5-quarter-note rest.
+    Quantization collisions remain explicit issues; raw JSON/MIDI keep them.
+    """
+    tunings = tunings or TUNINGS
+    score = ET.Element('score-partwise', version='4.0')
+    work = _add(score, 'work'); _add(work, 'work-title', 'Band2Tab - review draft')
+    plist = _add(score, 'part-list'); issues = []
+    divisions = 12; tick = divisions // grid; bar = beats_per_bar * grid
+    maxend = max((n['q_end'] for notes in parts.values() for n in notes), default=bar)
+    count = max(1, math.ceil(maxend / bar))
+    for pi, (part, notes) in enumerate(parts.items(), 1):
+        pid = f'P{pi}'
+        sp = _add(plist, 'score-part', id=pid); _add(sp, 'part-name', part.title())
+        tuning = tunings[part]; p = _add(score, 'part', id=pid)
+        by_string = defaultdict(list)
+        accepted = []
+        for n in sorted(notes, key=lambda n: (n['q_start'], n['q_end'])):
+            if n.get('string') is None:
+                continue
+            string_notes = by_string[n['string']]
+            if string_notes and n['q_start'] < string_notes[-1]['q_end']:
+                issues.append({'part': part, 'note_id': n['id'], 'reason': 'quantization_collision'})
+                continue
+            string_notes.append(n); accepted.append(n)
         for bi in range(count):
-            m=_add(p,'measure',number=str(bi+1)); lo=bi*bar; hi=lo+bar
-            if bi==0:
-                at=_add(m,'attributes');_add(at,'divisions',divisions)
-                tm=_add(at,'time');_add(tm,'beats',beats_per_bar);_add(tm,'beat-type',4)
-                clef=_add(at,'clef');_add(clef,'sign','TAB');_add(clef,'line',5 if len(tuning)==6 else 3)
-                details=_add(at,'staff-details');_add(details,'staff-lines',len(tuning))
-                # Staff tuning lines run low to high; technical string 1 is high.
-                for line,op in enumerate(reversed(tuning),1):
-                    st=_add(details,'staff-tuning',line=str(line)); name=NAMES[op%12]
-                    _add(st,'tuning-step',name[0])
-                    if len(name)>1:_add(st,'tuning-alter',1)
-                    _add(st,'tuning-octave',op//12-1)
-                dr=_add(m,'direction');dt=_add(dr,'direction-type');met=_add(dt,'metronome')
-                _add(met,'beat-unit','quarter');_add(met,'per-minute',bpm)
-                _add(dr,'sound',tempo=str(bpm))
-            if beats is not None and bi>0 and bi*beats_per_bar+1<len(beats):
-                k=bi*beats_per_bar
-                tempo=60/max(1e-6,beats[k+1]-beats[k])
-                dr=_add(m,'direction');dt=_add(dr,'direction-type');met=_add(dt,'metronome')
-                _add(met,'beat-unit','quarter');_add(met,'per-minute',round(tempo,3));_add(dr,'sound',tempo=str(round(tempo,3)))
-            for string in range(1,len(tuning)+1):
-                if string>1: _add(_add(m,'backup'),'duration',bar*tick)
-                cursor=lo
-                def rest(length):
-                    if length<=0:return
-                    no=_add(m,'note',**({'print-object':'no'} if string>1 else {}));_add(no,'rest');_add(no,'duration',length*tick);_add(no,'voice',string)
-                for n in by_string[string]:
-                    a=max(lo,n['q_start']); b=min(hi,n['q_end'])
-                    if a>=b:continue
-                    rest(a-cursor)
-                    no=_add(m,'note');pitch=_add(no,'pitch');name=NAMES[n['pitch']%12]
-                    _add(pitch,'step',name[0])
-                    if len(name)>1:_add(pitch,'alter',1)
-                    _add(pitch,'octave',n['pitch']//12-1)
-                    _add(no,'duration',(b-a)*tick)
-                    if n['q_start']<lo:_add(no,'tie',type='stop')
-                    if n['q_end']>hi:_add(no,'tie',type='start')
-                    _add(no,'voice',string)
-                    nt=_add(no,'notations')
-                    if n['q_start']<lo:_add(nt,'tied',type='stop')
-                    if n['q_end']>hi:_add(nt,'tied',type='start')
-                    tech=_add(nt,'technical');_add(tech,'string',string);_add(tech,'fret',n['fret'])
-                    cursor=b
-                rest(hi-cursor)
-    ET.indent(score,space='  ')
-    Path(dest).write_bytes(ET.tostring(score,encoding='utf-8',xml_declaration=True))
+            m = _add(p, 'measure', number=str(bi + 1)); lo = bi * bar; hi = lo + bar
+            if bi == 0:
+                at = _add(m, 'attributes'); _add(at, 'divisions', divisions)
+                tm = _add(at, 'time'); _add(tm, 'beats', beats_per_bar); _add(tm, 'beat-type', 4)
+                clef = _add(at, 'clef'); _add(clef, 'sign', 'TAB'); _add(clef, 'line', 5 if len(tuning) == 6 else 3)
+                details = _add(at, 'staff-details'); _add(details, 'staff-lines', len(tuning))
+                for line, op in enumerate(reversed(tuning), 1):
+                    st = _add(details, 'staff-tuning', line=str(line)); name = NAMES[op % 12]
+                    _add(st, 'tuning-step', name[0])
+                    if len(name) > 1:
+                        _add(st, 'tuning-alter', 1)
+                    _add(st, 'tuning-octave', op // 12 - 1)
+                dr = _add(m, 'direction'); dt = _add(dr, 'direction-type'); met = _add(dt, 'metronome')
+                _add(met, 'beat-unit', 'quarter'); _add(met, 'per-minute', bpm)
+                _add(dr, 'sound', tempo=str(bpm))
+            if beats is not None and bi > 0 and bi * beats_per_bar + 1 < len(beats):
+                k = bi * beats_per_bar
+                tempo = round(60 / max(1e-6, beats[k + 1] - beats[k]), 3)
+                dr = _add(m, 'direction'); dt = _add(dr, 'direction-type'); met = _add(dt, 'metronome')
+                _add(met, 'beat-unit', 'quarter'); _add(met, 'per-minute', tempo)
+                _add(dr, 'sound', tempo=str(tempo))
+            measure_notes = [n for n in accepted if n['q_start'] < hi and n['q_end'] > lo]
+            boundaries = sorted({lo, hi, *(max(lo, n['q_start']) for n in measure_notes),
+                                 *(min(hi, n['q_end']) for n in measure_notes)})
+            for start, end in zip(boundaries, boundaries[1:]):
+                active = sorted([n for n in measure_notes if n['q_start'] <= start < n['q_end']],
+                                key=lambda n: (n['pitch'], n['id']))
+                cursor = start
+                for length, kind, dots, triplet in _rhythm_chunks(end - start, grid, start):
+                    chunk_end = cursor + length
+                    if not active:
+                        no = _add(m, 'note'); _add(no, 'rest'); _add(no, 'duration', length * tick)
+                        _add(no, 'voice', 1); _note_value(no, kind, dots, triplet)
+                    for index, n in enumerate(active):
+                        no = _add(m, 'note')
+                        if index:
+                            _add(no, 'chord')
+                        pitch = _add(no, 'pitch'); name = NAMES[n['pitch'] % 12]
+                        _add(pitch, 'step', name[0])
+                        if len(name) > 1:
+                            _add(pitch, 'alter', 1)
+                        _add(pitch, 'octave', n['pitch'] // 12 - 1)
+                        _add(no, 'duration', length * tick)
+                        stop = n['q_start'] < cursor; onward = n['q_end'] > chunk_end
+                        if stop:
+                            _add(no, 'tie', type='stop')
+                        if onward:
+                            _add(no, 'tie', type='start')
+                        _add(no, 'voice', 1); _note_value(no, kind, dots, triplet)
+                        nt = _add(no, 'notations')
+                        if stop:
+                            _add(nt, 'tied', type='stop')
+                        if onward:
+                            _add(nt, 'tied', type='start')
+                        tech = _add(nt, 'technical'); _add(tech, 'string', n['string']); _add(tech, 'fret', n['fret'])
+                    cursor = chunk_end
+    ET.indent(score, space='  ')
+    Path(dest).write_bytes(ET.tostring(score, encoding='utf-8', xml_declaration=True))
+    from .notation import validate_musicxml
+    validate_musicxml(dest)
     return issues
 
 def write_midi(parts,dest,bpm=120.):

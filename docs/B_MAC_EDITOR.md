@@ -51,7 +51,7 @@ BAND2TAB_PYTHON="$PWD/.venv/bin/python" bash setup_mac.sh --score-only
 BASH
 ```
 
-期待値：B用テスト11件がOK、既知音符9音・issues 0、ターミナルにローカルURLが表示される。
+期待値：B用テスト14件がOK、既知音符9音・issues 0、ターミナルにローカルURLが表示される。
 Chromeで `http://127.0.0.1:8501` を開く。起動時の任意のメール登録は表示しない。
 ポート8501が他のアプリで使用中なら `BAND2TAB_PORT=8502 ./Band2Tab.command`。
 終了は起動したターミナルでCtrl+C。
@@ -72,11 +72,13 @@ issues=0は認識精度や見栄えの保証ではない。未割当・量子化
 
 ```bash
 cd /Users/haruya/Downloads/music_ai_exp_B
-.venv/bin/python scripts/b_check_saved.py --example-edit --open-score
+.venv/bin/python scripts/b_check_saved.py --example-edit --regenerate --open-score
 ```
 
 最新の編集結果を読み、JSONとMIDIの音高・秒時刻、弦の競合、52→53以外の音符の保持、
-既知音符例のMusicXMLの9音を検査する。検査後の譜面をMuseScoreで開く。
+既知音符例のMusicXMLの9音を検査する。音価・連符の比率・各声部の小節長も照合する。
+`--regenerate`は元のJSONから別フォルダへ新しい譜面を作り、古い保存結果を保持する。
+検査後の譜面をMuseScoreで開く。
 複数の結果がある場合は `--notes results/ui/.../notes.json` で対象を明示できる。
 
 ## モデルを使う段階
@@ -97,8 +99,25 @@ MacでのMPS実行、実音源精度、拍の妥当性、オフラインでの�
 ## 統合後のクラウド検証
 
 - Python 3.12.14 / Linux x86_64 / PyTorch 2.9.1+cpu。
-- Aの既存57件＋Bの11件、計68件が成功。
-- PyTorch・librosaなしの別環境でもB用11件が成功。
+- Aの既存57件＋Bの14件、計71件が成功。
+- PyTorch・librosaなしの別環境でもB用14件が成功。
 - bash／zsh構文とPythonコンパイルが成功。
 - 開始セットの既知音符MusicXMLは4.0公式スキーマに適合することを確認済み。
 - Mac上の修正版の導入・操作は利用者と確認してから完了扱いにする。
+
+## 11/19：MuseScoreの「長すぎる声部」の修正
+
+利用者のMacで、1小節目のギター声部2・ベース声部4が9/8と読み込まれることが判明した。
+以前の保存チェックはJSON・MIDI・音高・XMLの構文を検査していたが、音価の解釈までは検査していなかった。
+MusicXMLのdurationが正しくても、typeを省いた2.5拍の休符をMuseScoreが3拍へ丸めるため、
+読み込み後の小節が4.5拍になっていた。MuseScore 4.7.7実体で再現した。
+
+修正後は全音符・休符にtype、必要な付点・3:2連符を記載する。
+同時発音は1声部の和音、持続は分割した音をタイでつなぎ、6弦を別々の声部にする方式をやめた。
+音符JSON・raw MIDIの音高と生の秒時刻は変えない。
+
+MuseScore 4.7.7のLinux版で8ケースを読み込み・再出力し、全ケースの小節長、
+タイを連結した音高・拍位置・弦・フレットを元の量子化音符と照合した。
+既知9音、52→53編集、3連符、3/4小節またぎ、6弦和音、独立した持続、
+パートごとの異なる終端、テンポマップを含む。
+新出力はMusicXML 4.0公式スキーマでも検査する。Macで警告が消えることは利用者の再確認が必要。

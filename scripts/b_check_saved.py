@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 
 import pretty_midi
@@ -53,6 +54,9 @@ def check(notes_path, example_edit=False):
     xml = ET.parse(folder / 'score.musicxml')
     if xml.getroot().tag != 'score-partwise' or xml.getroot().get('version') != '4.0':
         raise ValueError('MusicXML 4.0の譜面ではありません。')
+    sys.path.insert(0, str(ROOT))
+    from band2tab.notation import validate_musicxml
+    validate_musicxml(folder / 'score.musicxml')
     if example_edit:
         expected_document = json.loads((ROOT / 'examples/notes.json').read_text(encoding='utf-8'))
         expected_document['parts']['guitar'][0]['pitch'] = 53
@@ -71,7 +75,7 @@ def check(notes_path, example_edit=False):
             raise ValueError('既知音符とMusicXMLの音高・音符数が一致しません。')
         if len(xml.findall('.//technical/string')) != count:
             raise ValueError('MusicXMLのTAB音符数が一致しません。')
-    print(f'PASS: {count}音 / JSONとMIDIの音高・秒時刻が一致 / 運指が音高と一致 / 弦の競合0 / issues=0')
+    print(f'PASS: {count}音 / JSONとMIDIの音高・秒時刻が一致 / 運指が音高と一致 / 弦の競合0 / MusicXMLの音価・拍数が一致 / issues=0')
     if example_edit:
         print('PASS: ギター52→53、ベース28を含む他の音符の保持、MusicXMLの全9音を確認')
     print('保存先:', folder)
@@ -83,6 +87,7 @@ def main():
     parser.add_argument('--notes', type=Path, help='省略時はresults/ui内の最新の編集結果を検査')
     parser.add_argument('--example-edit', action='store_true', help='既知音符の最初のギター音52を53に変えた例を照合')
     parser.add_argument('--open-score', action='store_true', help='検査成功後にMacのMuseScore 4で開く')
+    parser.add_argument('--regenerate', action='store_true', help='保存済みJSONから新しい別フォルダへ譜面を再生成')
     args = parser.parse_args()
     notes = args.notes
     if notes is None:
@@ -90,6 +95,16 @@ def main():
         if not candidates:
             raise ValueError('保存済みの編集結果がありません。画面で「修正を反映する」を押してください。')
         notes = max(candidates, key=lambda p: p.stat().st_mtime_ns)
+    if args.regenerate:
+        sys.path.insert(0, str(ROOT))
+        from band2tab.workflow import export_document
+        document = json.loads(notes.read_text(encoding='utf-8'))
+        chord_path = notes.parent / 'chords.json'
+        chords = json.loads(chord_path.read_text(encoding='utf-8')) if chord_path.exists() else None
+        folder = Path(tempfile.mkdtemp(prefix='edited_fixed_', dir=notes.parent.parent))
+        export_document(document, folder, chords)
+        notes = folder / 'notes.json'
+        print('保存済みの音符から別フォルダへ再生成しました:', folder)
     score = check(notes, args.example_edit)
     if args.open_score:
         if sys.platform != 'darwin':

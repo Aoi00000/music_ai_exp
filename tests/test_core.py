@@ -24,7 +24,11 @@ class Core(unittest.TestCase):
             self.assertEqual(j['parts']['bass'][0]['onset'],.123)
             self.assertEqual(sorted(n['pitch'] for n in j['parts']['bass']),[28,35])
             root=E.parse(Path(d)/'score.musicxml')
-            self.assertEqual(len(root.findall('.//technical/string')),2);self.assertEqual(root.findtext('.//staff-lines'),'4')
+            # Tied slices retain the same sustained event; count attacks,
+            # rather than treating each tied MusicXML fragment as a new note.
+            self.assertEqual(sum(n.find('pitch') is not None and n.find('tie[@type="stop"]') is None
+                                 for n in root.findall('.//note')),2)
+            self.assertEqual(root.findtext('.//staff-lines'),'4')
     def test_rearticulation_and_multilabel(self):
         p=np.zeros((20,3,N_PITCHES),np.float32);p[1:18,1,40]=.9;p[[1,9],0,40]=.9
         p[1:10,1,44]=.9;p[1,0,44]=.9;notes=decode(p)

@@ -85,10 +85,54 @@ class ScoreWorkflow(unittest.TestCase):
             root = ET.parse(Path(d) / 'score.musicxml')
             self.assertTrue(root.findall('.//tie[@type="start"]'))
             self.assertTrue(root.findall('.//tie[@type="stop"]'))
+            from band2tab.notation import validate_musicxml
+            self.assertEqual(validate_musicxml(Path(d)/'score.musicxml'), 3)
             for measure in root.findall('.//measure'):
-                for voice in map(str, range(1, 7)):
-                    self.assertEqual(sum(int(n.findtext('duration')) for n in measure.findall('note')
-                                         if n.findtext('voice') == voice), 36)
+                self.assertEqual(sum(int(n.findtext('duration')) for n in measure.findall('note')
+                                     if n.find('chord') is None), 36)
+
+    def test_example_has_explicit_values_and_complete_measures(self):
+        from band2tab.notation import validate_musicxml
+        with tempfile.TemporaryDirectory() as d:
+            export_document(self.document, d)
+            path = Path(d)/'score.musicxml'
+            self.assertEqual(validate_musicxml(path), 2)
+            root = ET.parse(path)
+            self.assertEqual(len(root.findall('.//technical/string')),9)
+            self.assertTrue(root.findall('.//chord'))
+            # The original exporter omitted types: this must no longer pass.
+            note=root.find('.//note');note.remove(note.find('type'));root.write(path)
+            with self.assertRaisesRegex(ValueError,'音価'):
+                validate_musicxml(path)
+
+    def test_six_string_chord_and_independent_sustain_fit_one_voice(self):
+        from band2tab.notation import validate_musicxml
+        doc=dict(parts={'guitar':[dict(pitch=p,onset=0.,offset=1.25 if i==0 else .5)
+                                 for i,p in enumerate([40,45,50,55,59,64])]},bpm=120.)
+        with tempfile.TemporaryDirectory() as d:
+            result=export_document(doc,d)
+            self.assertEqual(result['issues'],0)
+            path=Path(d)/'score.musicxml';validate_musicxml(path)
+            root=ET.parse(path)
+            self.assertEqual({n.text for n in root.findall('.//voice')},{'1'})
+            self.assertEqual(len(root.findall('.//chord')),5)
+            self.assertTrue(root.findall('.//tie[@type="start"]'))
+            self.assertEqual(sum(1 for n in root.findall('.//note') if n.find('pitch') is not None
+                                 and n.find('tie[@type="stop"]') is None),6)
+
+    def test_triplets_and_nonstandard_lengths_preserve_quantized_intervals(self):
+        from fractions import Fraction
+        from band2tab.notation import validate_musicxml
+        for grid in (3,4):
+            with self.subTest(grid=grid),tempfile.TemporaryDirectory() as d:
+                doc=dict(parts={'guitar':[dict(pitch=64,onset=0.,offset=2.5/grid)]},
+                         bpm=120.,grid=grid,beats_per_bar=4)
+                export_document(doc,d)
+                path=Path(d)/'score.musicxml';validate_musicxml(path)
+                root=ET.parse(path)
+                duration=sum(int(n.findtext('duration')) for n in root.findall('.//note') if n.find('pitch') is not None)
+                self.assertEqual(Fraction(duration,12),Fraction(5,grid))
+                if grid==3:self.assertTrue(root.findall('.//time-modification'))
 
     def test_unassigned_and_quantization_collision_are_visible_but_raw_midi_keeps_notes(self):
         doc = dict(parts={'guitar': [dict(pitch=0, onset=0., offset=1.),
